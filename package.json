@@ -1,0 +1,14 @@
+{
+  "name": "app-sheep-web",
+  "version": "1.0.0",
+  "description": "Aplicación Web vinculada a AppSheet (App Sheep) con gestión de preventas e impresión de tickets",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "better-sqlite3": "^12.11.1"
+  },
+  "private": true
+}

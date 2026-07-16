@@ -87,6 +87,10 @@
 </head>
 <body class="h-full font-sans antialiased">
 
+  <!-- Datalists for Autocomplete -->
+  <datalist id="clientes-list"></datalist>
+  <datalist id="productos-list"></datalist>
+
   <!-- Main Container -->
   <div id="app-container" class="min-h-screen flex flex-col">
     
@@ -368,7 +372,7 @@
           
           <div>
             <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Nombre del Cliente *</label>
-            <input type="text" id="form-cliente" required placeholder="Ej. María González" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+            <input type="text" id="form-cliente" list="clientes-list" oninput="handleClientInput(this.value)" required placeholder="Ej. María González" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
           </div>
 
           <div>
@@ -664,6 +668,8 @@
   <script>
     // App State
     let preventas = [];
+    let clientesGlobal = [];
+    let productosGlobal = [];
     let activeFilters = {
       search: '',
       status: 'todos'
@@ -679,10 +685,70 @@
       
       // Load Data from API
       fetchPreventas();
+      fetchClientesAndProductos();
       
       // Sync initial AppSheet info
       updateAppSheetSyncTime();
     });
+
+    // Fetch clients and products for autocomplete lists
+    async function fetchClientesAndProductos() {
+      try {
+        const resClientes = await fetch('/api/clientes');
+        if (resClientes.ok) {
+          clientesGlobal = await resClientes.json();
+          populateClientesDatalist();
+        }
+
+        const resProductos = await fetch('/api/productos');
+        if (resProductos.ok) {
+          productosGlobal = await resProductos.json();
+          populateProductosDatalist();
+        }
+      } catch (err) {
+        console.error("Error fetching clients or products:", err);
+      }
+    }
+
+    function populateClientesDatalist() {
+      const datalist = document.getElementById('clientes-list');
+      if (datalist) {
+        datalist.innerHTML = clientesGlobal.map(c => `<option value="${c.nombre}"></option>`).join('');
+      }
+    }
+
+    function populateProductosDatalist() {
+      const datalist = document.getElementById('productos-list');
+      if (datalist) {
+        datalist.innerHTML = productosGlobal.map(p => `<option value="${p.concat}"></option>`).join('');
+      }
+    }
+
+    function handleClientInput(value) {
+      const matched = clientesGlobal.find(c => c.nombre.toLowerCase().trim() === value.toLowerCase().trim());
+      if (matched && matched.telefono) {
+        const telInput = document.getElementById('form-telefono');
+        if (telInput) {
+          telInput.value = matched.telefono;
+        }
+      }
+    }
+
+    function handleProductInput(rowIndex, value) {
+      const matched = productosGlobal.find(p => p.concat.toLowerCase().trim() === value.toLowerCase().trim());
+      if (matched) {
+        // Find the price input for this row and update it
+        const row = document.getElementById(`form-row-${rowIndex}`);
+        if (row) {
+          const priceInput = row.querySelector('input[type="number"][step="0.01"]');
+          if (priceInput) {
+            priceInput.value = matched.precio;
+            // Trigger state update
+            updateFormItem(rowIndex, 'precio_unitario', matched.precio);
+          }
+        }
+      }
+    }
 
     // Fetch all preventas from API
     async function fetchPreventas() {
@@ -815,7 +881,7 @@
 
       tr.innerHTML = `
         <td class="py-2 px-4">
-          <input type="text" value="${producto}" onchange="updateFormItem(${rowIndex}, 'producto', this.value)" required placeholder="Nombre del producto o servicio" class="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
+          <input type="text" value="${producto}" list="productos-list" oninput="handleProductInput(${rowIndex}, this.value)" onchange="updateFormItem(${rowIndex}, 'producto', this.value)" required placeholder="Nombre del producto o servicio" class="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
         </td>
         <td class="py-2 px-3">
           <input type="number" value="${cantidad}" min="1" step="1" onchange="updateFormItem(${rowIndex}, 'cantidad', this.value)" required class="w-full text-center px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
@@ -1288,6 +1354,8 @@
           if (data.success) {
             updateAppSheetSyncTime();
             showToast('Sincronización de base de datos bidireccional exitosa', 'success');
+            // Refresh clients and products after full sync
+            fetchClientesAndProductos();
           } else {
             throw new Error('Sincronización rechazada');
           }
@@ -1315,6 +1383,8 @@
         syncIcon.classList.remove('animate-spin');
         updateAppSheetSyncTime();
         console.log("AppSheet relational backend synchronized with spreadsheets successfully.");
+        // Refresh clients and products in case sync added/updated items
+        fetchClientesAndProductos();
       }, 600);
     }
 

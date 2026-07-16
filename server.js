@@ -8,6 +8,11 @@ const port = process.env.PORT || 3000;
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(__dirname)); // also serve root folder for index.html
+
+// AppSheet API config
+const APPSHEET_APP_ID = process.env.APPSHEET_APP_ID || "5f559e4e-a33c-4f2e-9180-21b935687975";
+const APPSHEET_ACCESS_KEY = process.env.APPSHEET_ACCESS_KEY || "V2-TTAaj-UPBlO-ccGTR-j5YTz-xopwO-0NLXj-SCe9c-aTTxF";
 
 // Database Setup
 const db = new Database('database.db', { verbose: console.log });
@@ -100,11 +105,136 @@ if (countPreventas.count === 0) {
   console.log('Database successfully populated.');
 }
 
+// AppSheet API Helper function
+async function callAppSheetAPI(tableName, action, rows = [], selector = null) {
+  const url = `https://api.appsheet.com/api/v2/apps/${APPSHEET_APP_ID}/tables/${encodeURIComponent(tableName)}/Action`;
+
+  const payload = {
+    Action: action,
+    Properties: {
+      Locale: "es-ES",
+      Timezone: "Romance Standard Time"
+    }
+  };
+
+  if (selector) {
+    payload.Properties.Selector = selector;
+  }
+
+  if (rows && rows.length > 0) {
+    payload.Rows = rows;
+  } else if (action === "Find") {
+    payload.Rows = [];
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "applicationAccessKey": APPSHEET_ACCESS_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`AppSheet API Error on table ${tableName} (status ${response.status}):`, errorText);
+      return null;
+    }
+
+    const text = await response.text();
+    if (!text || text.length === 0) {
+      return [];
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      console.error("Failed to parse AppSheet response JSON:", e.message, "Response was:", text);
+      return [];
+    }
+  } catch (error) {
+    console.error(`Fetch error connecting to AppSheet API:`, error.message);
+    return null;
+  }
+}
+
+// Sync function to pull from AppSheet and update local SQLite cache
+async function syncFromAppSheetToSQLite() {
+  console.log('Attempting to fetch data from AppSheet...');
+  const preventasFromAppSheet = await callAppSheetAPI("PREVENTAS", "Find");
+  const detallesFromAppSheet = await callAppSheetAPI("DETALLE_DE_PREVENTAS", "Find");
+
+  if (Array.isArray(preventasFromAppSheet) && preventasFromAppSheet.length > 0) {
+    console.log(`Syncing ${preventasFromAppSheet.length} preventas from AppSheet...`);
+    db.transaction(() => {
+      // Clear local tables
+      db.prepare('DELETE FROM DETALLE_DE_PREVENTAS').run();
+      db.prepare('DELETE FROM PREVENTAS').run();
+
+      const insertPreventa = db.prepare(`
+        INSERT INTO PREVENTAS (id, cliente, telefono, fecha, total, estado, notas)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      const insertDetalle = db.prepare(`
+        INSERT INTO DETALLE_DE_PREVENTAS (id, preventa_id, producto, cantidad, precio_unitario, subtotal)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+
+      for (const p of preventasFromAppSheet) {
+        // Normalize keys to lowercase to be robust against AppSheet uppercase column mappings
+        const pNormalized = {};
+        for (const k of Object.keys(p)) {
+          pNormalized[k.toLowerCase()] = p[k];
+        }
+
+        insertPreventa.run(
+          parseInt(pNormalized.id),
+          pNormalized.cliente || '',
+          pNormalized.telefono || '',
+          pNormalized.fecha || '',
+          parseFloat(pNormalized.total) || 0.0,
+          pNormalized.estado || 'Pendiente',
+          pNormalized.notas || ''
+        );
+      }
+
+      if (Array.isArray(detallesFromAppSheet)) {
+        for (const d of detallesFromAppSheet) {
+          const dNormalized = {};
+          for (const k of Object.keys(d)) {
+            dNormalized[k.toLowerCase()] = d[k];
+          }
+
+          insertDetalle.run(
+            parseInt(dNormalized.id),
+            parseInt(dNormalized.preventa_id),
+            dNormalized.producto || '',
+            parseInt(dNormalized.cantidad) || 0,
+            parseFloat(dNormalized.precio_unitario) || 0.0,
+            parseFloat(dNormalized.subtotal) || 0.0
+          );
+        }
+      }
+    })();
+    console.log('Local database synced with AppSheet successfully.');
+  } else {
+    console.log('AppSheet PREVENTAS table is empty or offline, using local SQLite cache.');
+  }
+}
+
 // REST API Endpoints
 
 // GET /api/preventas - Get all pre-sales
-app.get('/api/preventas', (req, res) => {
+app.get('/api/preventas', async (req, res) => {
   try {
+    // Try syncing from AppSheet first
+    await syncFromAppSheetToSQLite().catch(err => {
+      console.warn("AppSheet Sync failed during GET, falling back to SQLite directly:", err.message);
+    });
+
     const preventas = db.prepare('SELECT * FROM PREVENTAS ORDER BY fecha DESC, id DESC').all();
     
     // For each preventa, fetch its details
@@ -139,7 +269,7 @@ app.get('/api/preventas/:id', (req, res) => {
 });
 
 // POST /api/preventas - Create a new pre-sale and its details
-app.post('/api/preventas', (req, res) => {
+app.post('/api/preventas', async (req, res) => {
   const { cliente, telefono, fecha, estado, notas, detalles } = req.body;
   
   if (!cliente || !fecha || !detalles || !Array.isArray(detalles) || detalles.length === 0) {
@@ -164,7 +294,7 @@ app.post('/api/preventas', (req, res) => {
       VALUES (?, ?, ?, ?, ?)
     `);
 
-    // Use transaction for safe creation
+    // Use transaction for safe local creation
     let newId;
     const executeTransaction = db.transaction(() => {
       const result = insertPreventa.run(
@@ -182,11 +312,42 @@ app.post('/api/preventas', (req, res) => {
           throw new Error('Detalles de producto inválidos: ' + JSON.stringify(item));
         }
         const subtotal = item.cantidad * item.precio_unitario;
-        insertDetalle.run(newId, item.producto, item.cantidad, item.precio_unitario, subtotal);
+        const detResult = insertDetalle.run(newId, item.producto, item.cantidad, item.precio_unitario, subtotal);
+        item.id = detResult.lastInsertRowid; // Track the SQLite generated ID for the detail
       }
     });
 
     executeTransaction();
+
+    // Now send the changes to AppSheet cloud backend
+    const pRow = {
+      id: String(newId),
+      cliente: cliente,
+      telefono: telefono || '',
+      fecha: fecha,
+      total: String(totalCalculado),
+      estado: estado || 'Pendiente',
+      notas: notas || ''
+    };
+
+    // Call Add action on AppSheet for PREVENTAS
+    await callAppSheetAPI("PREVENTAS", "Add", [pRow]).catch(err => {
+      console.error("AppSheet API PREVENTAS Add failed:", err.message);
+    });
+
+    // Call Add action on AppSheet for DETALLE_DE_PREVENTAS
+    const dRows = detalles.map(item => ({
+      id: String(item.id),
+      preventa_id: String(newId),
+      producto: item.producto,
+      cantidad: String(item.cantidad),
+      precio_unitario: String(item.precio_unitario),
+      subtotal: String(item.cantidad * item.precio_unitario)
+    }));
+
+    await callAppSheetAPI("DETALLE_DE_PREVENTAS", "Add", dRows).catch(err => {
+      console.error("AppSheet API DETALLE_DE_PREVENTAS Add failed:", err.message);
+    });
 
     // Fetch and return the newly created preventa
     const createdPreventa = db.prepare('SELECT * FROM PREVENTAS WHERE id = ?').get(newId);
@@ -200,7 +361,7 @@ app.post('/api/preventas', (req, res) => {
 });
 
 // PUT /api/preventas/:id - Update an existing pre-sale and its details
-app.put('/api/preventas/:id', (req, res) => {
+app.put('/api/preventas/:id', async (req, res) => {
   const id = req.params.id;
   const { cliente, telefono, fecha, estado, notas, detalles } = req.body;
   
@@ -232,7 +393,10 @@ app.put('/api/preventas/:id', (req, res) => {
       VALUES (?, ?, ?, ?, ?)
     `);
 
-    // Perform inside transaction
+    // Retrieve old detail IDs from SQLite so we can delete them from AppSheet
+    const oldDetails = db.prepare('SELECT id FROM DETALLE_DE_PREVENTAS WHERE preventa_id = ?').all(id);
+
+    // Perform inside transaction locally
     const executeTransaction = db.transaction(() => {
       updatePreventa.run(cliente, telefono || '', fecha, totalCalculado, estado || 'Pendiente', notas || '', id);
       deleteDetalles.run(id);
@@ -242,11 +406,50 @@ app.put('/api/preventas/:id', (req, res) => {
           throw new Error('Detalles de producto inválidos: ' + JSON.stringify(item));
         }
         const subtotal = item.cantidad * item.precio_unitario;
-        insertDetalle.run(id, item.producto, item.cantidad, item.precio_unitario, subtotal);
+        const detResult = insertDetalle.run(id, item.producto, item.cantidad, item.precio_unitario, subtotal);
+        item.id = detResult.lastInsertRowid; // Track the new generated ID
       }
     });
 
     executeTransaction();
+
+    // Now update AppSheet cloud tables
+    const pRow = {
+      id: String(id),
+      cliente: cliente,
+      telefono: telefono || '',
+      fecha: fecha,
+      total: String(totalCalculado),
+      estado: estado || 'Pendiente',
+      notas: notas || ''
+    };
+
+    // Call Edit action on AppSheet for PREVENTAS
+    await callAppSheetAPI("PREVENTAS", "Edit", [pRow]).catch(err => {
+      console.error("AppSheet API PREVENTAS Edit failed:", err.message);
+    });
+
+    // Delete old details on AppSheet
+    if (oldDetails.length > 0) {
+      const deleteRows = oldDetails.map(d => ({ id: String(d.id) }));
+      await callAppSheetAPI("DETALLE_DE_PREVENTAS", "Delete", deleteRows).catch(err => {
+        console.error("AppSheet API DETALLE_DE_PREVENTAS Delete failed:", err.message);
+      });
+    }
+
+    // Add new details on AppSheet
+    const dRows = detalles.map(item => ({
+      id: String(item.id),
+      preventa_id: String(id),
+      producto: item.producto,
+      cantidad: String(item.cantidad),
+      precio_unitario: String(item.precio_unitario),
+      subtotal: String(item.cantidad * item.precio_unitario)
+    }));
+
+    await callAppSheetAPI("DETALLE_DE_PREVENTAS", "Add", dRows).catch(err => {
+      console.error("AppSheet API DETALLE_DE_PREVENTAS Add failed:", err.message);
+    });
 
     // Fetch and return the updated preventa
     const updatedPreventa = db.prepare('SELECT * FROM PREVENTAS WHERE id = ?').get(id);
@@ -260,7 +463,7 @@ app.put('/api/preventas/:id', (req, res) => {
 });
 
 // DELETE /api/preventas/:id - Delete a pre-sale
-app.delete('/api/preventas/:id', (req, res) => {
+app.delete('/api/preventas/:id', async (req, res) => {
   const id = req.params.id;
   try {
     const existing = db.prepare('SELECT id FROM PREVENTAS WHERE id = ?').get(id);
@@ -268,8 +471,26 @@ app.delete('/api/preventas/:id', (req, res) => {
       return res.status(404).json({ error: 'Preventa no encontrada' });
     }
 
-    // Cascade delete is active due to FOREIGN KEY ... ON DELETE CASCADE
+    // Retrieve old detail IDs from SQLite so we can delete them from AppSheet
+    const oldDetails = db.prepare('SELECT id FROM DETALLE_DE_PREVENTAS WHERE preventa_id = ?').all(id);
+
+    // Cascade delete is active due to FOREIGN KEY ... ON DELETE CASCADE locally
     db.prepare('DELETE FROM PREVENTAS WHERE id = ?').run(id);
+
+    // Update AppSheet Cloud Tables
+    // Delete associated details first on AppSheet
+    if (oldDetails.length > 0) {
+      const deleteRows = oldDetails.map(d => ({ id: String(d.id) }));
+      await callAppSheetAPI("DETALLE_DE_PREVENTAS", "Delete", deleteRows).catch(err => {
+        console.error("AppSheet API DETALLE_DE_PREVENTAS Delete failed:", err.message);
+      });
+    }
+
+    // Delete parent row from AppSheet
+    await callAppSheetAPI("PREVENTAS", "Delete", [{ id: String(id) }]).catch(err => {
+      console.error("AppSheet API PREVENTAS Delete failed:", err.message);
+    });
+
     res.json({ message: 'Preventa eliminada con éxito', id });
   } catch (err) {
     console.error(err);
@@ -299,13 +520,18 @@ app.get('/api/appsheet-status', (req, res) => {
   });
 });
 
-app.post('/api/appsheet-sync', (req, res) => {
-  // Simulate AppSheet webhook trigger or spreadsheet push
-  res.json({
-    success: true,
-    message: "Sincronización bidireccional exitosa con las Hojas de Cálculo de Google (App Sheep).",
-    timestamp: new Date().toISOString()
-  });
+app.post('/api/appsheet-sync', async (req, res) => {
+  try {
+    await syncFromAppSheetToSQLite();
+    res.json({
+      success: true,
+      message: "Sincronización bidireccional exitosa con las Hojas de Cálculo de Google (App Sheep).",
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: "Error de sincronización: " + err.message });
+  }
 });
 
 // Start server

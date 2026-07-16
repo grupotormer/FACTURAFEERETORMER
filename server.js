@@ -41,10 +41,56 @@ db.exec(`
     subtotal REAL NOT NULL DEFAULT 0.0,
     FOREIGN KEY (preventa_id) REFERENCES PREVENTAS(id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS CLIENTES (
+    id TEXT PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    telefono TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS STOCK (
+    material TEXT PRIMARY KEY,
+    precio REAL NOT NULL DEFAULT 0.0,
+    concat TEXT NOT NULL
+  );
 `);
 
 // Insert some realistic dummy data if tables are empty
 const countPreventas = db.prepare('SELECT COUNT(*) as count FROM PREVENTAS').get();
+const countClientes = db.prepare('SELECT COUNT(*) as count FROM CLIENTES').get();
+const countStock = db.prepare('SELECT COUNT(*) as count FROM STOCK').get();
+
+if (countClientes.count === 0) {
+  console.log('Populating CLIENTES database with dummy data...');
+  const insertCliente = db.prepare(`
+    INSERT INTO CLIENTES (id, nombre, telefono)
+    VALUES (?, ?, ?)
+  `);
+  db.transaction(() => {
+    insertCliente.run('1', 'María González', '+34 612 345 678');
+    insertCliente.run('2', 'Juan Martínez (Ganadera El Prado)', '+34 699 888 777');
+    insertCliente.run('3', 'Ana Isabel Ruiz', '+34 655 444 333');
+    insertCliente.run('4', 'ACATHA SV SAS DE CV', '50376295120');
+  })();
+}
+
+if (countStock.count === 0) {
+  console.log('Populating STOCK database with dummy data...');
+  const insertStock = db.prepare(`
+    INSERT INTO STOCK (material, precio, concat)
+    VALUES (?, ?, ?)
+  `);
+  db.transaction(() => {
+    insertStock.run('Saco-01', 45.00, 'Saco de Alimento Premium Ovejas 25kg [Saco-01] - 45.00 €');
+    insertStock.run('Sup-01', 40.50, 'Suplemento Vitamínico Ovino 5L [Sup-01] - 40.50 €');
+    insertStock.run('Esq-01', 210.00, 'Esquiladora Profesional SheepCut [Esq-01] - 210.00 €');
+    insertStock.run('Cuc-01', 20.00, 'Cuchillas de repuesto SheepCut 4T [Cuc-01] - 20.00 €');
+    insertStock.run('Ide-01', 25.00, 'Identificadores de Oreja (Pack 100u) [Ide-01] - 25.00 €');
+    insertStock.run('Ten-01', 35.00, 'Tenaza Aplicadora de Crotales [Ten-01] - 35.00 €');
+    insertStock.run('PRI-000233', 0.10, 'PRI-000233 UNI TORNILLO PARA BISAGRA DE 1/2" Inventario en almacén 5980 - 0.10 €');
+    insertStock.run('PRI-000148', 0.03, 'PRI-000148 PZA REMACHE POP 1/8X1/2 44523 Inventario en almacén 552 - 0.03 €');
+  })();
+}
 
 if (countPreventas.count === 0) {
   console.log('Populating database with beautiful dummy data...');
@@ -165,6 +211,8 @@ async function syncFromAppSheetToSQLite() {
   console.log('Attempting to fetch data from AppSheet...');
   const preventasFromAppSheet = await callAppSheetAPI("PREVENTAS", "Find");
   const detallesFromAppSheet = await callAppSheetAPI("DETALLE_DE_PREVENTAS", "Find");
+  const clientesFromAppSheet = await callAppSheetAPI("clientes", "Find");
+  const stockFromAppSheet = await callAppSheetAPI("stock", "Find");
 
   if (Array.isArray(preventasFromAppSheet) && preventasFromAppSheet.length > 0) {
     console.log(`Syncing ${preventasFromAppSheet.length} preventas from AppSheet...`);
@@ -218,6 +266,49 @@ async function syncFromAppSheetToSQLite() {
           );
         }
       }
+
+      // Sync CLIENTES if returned
+      if (Array.isArray(clientesFromAppSheet) && clientesFromAppSheet.length > 0) {
+        db.prepare('DELETE FROM CLIENTES').run();
+        const insertCliente = db.prepare(`
+          INSERT INTO CLIENTES (id, nombre, telefono)
+          VALUES (?, ?, ?)
+        `);
+        for (const c of clientesFromAppSheet) {
+          // normalize keys to support robust case insensitivity
+          const cNormalized = {};
+          for (const k of Object.keys(c)) {
+            cNormalized[k.toLowerCase()] = c[k];
+          }
+          const id = cNormalized.idcliente || cNormalized.id || '';
+          const nombre = cNormalized.nombrecliente || cNormalized.nombre || '';
+          const telefono = cNormalized.telefono || '';
+          if (id && nombre) {
+            insertCliente.run(id, nombre, telefono);
+          }
+        }
+      }
+
+      // Sync STOCK if returned
+      if (Array.isArray(stockFromAppSheet) && stockFromAppSheet.length > 0) {
+        db.prepare('DELETE FROM STOCK').run();
+        const insertStock = db.prepare(`
+          INSERT INTO STOCK (material, precio, concat)
+          VALUES (?, ?, ?)
+        `);
+        for (const s of stockFromAppSheet) {
+          const sNormalized = {};
+          for (const k of Object.keys(s)) {
+            sNormalized[k.toLowerCase()] = s[k];
+          }
+          const material = sNormalized.material || '';
+          const precioVal = parseFloat(sNormalized.precio) || 0.0;
+          const concat = sNormalized.concat || '';
+          if (material && concat) {
+            insertStock.run(material, precioVal, concat);
+          }
+        }
+      }
     })();
     console.log('Local database synced with AppSheet successfully.');
   } else {
@@ -226,6 +317,28 @@ async function syncFromAppSheetToSQLite() {
 }
 
 // REST API Endpoints
+
+// GET /api/clientes - Get all clients
+app.get('/api/clientes', (req, res) => {
+  try {
+    const clientes = db.prepare('SELECT * FROM CLIENTES ORDER BY nombre').all();
+    res.json(clientes);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al obtener los clientes: ' + err.message });
+  }
+});
+
+// GET /api/productos - Get all stock items
+app.get('/api/productos', (req, res) => {
+  try {
+    const productos = db.prepare('SELECT * FROM STOCK ORDER BY concat').all();
+    res.json(productos);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al obtener los productos de stock: ' + err.message });
+  }
+});
 
 // GET /api/preventas - Get all pre-sales
 app.get('/api/preventas', async (req, res) => {

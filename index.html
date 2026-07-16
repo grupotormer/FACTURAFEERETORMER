@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-900 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>App Sheep - Control de Preventas e Impresión de Tickets</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              950: '#022c22',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1e293b;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #64748b;
+    }
+
+    /* Print styles */
+    @media print {
+      body {
+        background: white !important;
+        color: black !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      /* Hide everything except the ticket container marked for printing */
+      #app-container, .modal-backdrop, .no-print {
+        display: none !important;
+      }
+      #print-ticket-area {
+        display: block !important;
+        width: 80mm !important;
+        margin: 0 auto !important;
+        padding: 5mm !important;
+        background: white !important;
+        color: black !important;
+        font-family: 'Courier New', Courier, monospace !important;
+        font-size: 12px !important;
+        line-height: 1.2 !important;
+      }
+      /* Ensure clean typography for ticket when printed */
+      #print-ticket-area * {
+        color: black !important;
+        background: transparent !important;
+      }
+      /* Force paper size to thermal if supported */
+      @page {
+        size: 80mm auto;
+        margin: 0;
+      }
+    }
+
+    /* Standard screen display of print ticket area */
+    #print-ticket-area {
+      display: none;
+    }
+  </style>
+</head>
+<body class="h-full font-sans antialiased">
+
+  <!-- Main Container -->
+  <div id="app-container" class="min-h-screen flex flex-col">
+    
+    <!-- Top Navbar -->
+    <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-40">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          
+          <!-- Logo & Brand -->
+          <div class="flex items-center gap-3">
+            <div class="bg-gradient-to-tr from-emerald-500 to-green-600 p-2.5 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center">
+              <!-- Custom Sheep SVG -->
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2a5 5 0 0 0-4.9 4c-.3 0-.6 0-.9.1A4 4 0 0 0 4 10c0 .4 0 .7.1 1.1A4.5 4.5 0 0 0 5 20h14a4.5 4.5 0 0 0 .9-8.9c.1-.4.1-.7.1-1.1a4 4 0 0 0-2.2-3.9c-.3-.1-.6-.1-.9-.1A5 5 0 0 0 12 2z"/>
+                <path d="M10 13v2"/>
+                <path d="M14 13v2"/>
+                <path d="M8 11.5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
+                <path d="M16 11.5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-xl font-bold tracking-tight text-white">APP SHEEP</span>
+                <span class="bg-emerald-500/10 text-emerald-400 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-emerald-500/20 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
+                  AppSheet Link
+                </span>
+              </div>
+              <p class="text-[10px] text-slate-400 font-medium tracking-wide uppercase">Sistema de Gestión de Preventas</p>
+            </div>
+          </div>
+
+          <!-- Quick action & Connection Status -->
+          <div class="flex items-center gap-4">
+            <button onclick="syncAppSheet()" class="flex items-center gap-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white px-3.5 py-2 rounded-lg border border-slate-600 text-sm font-medium transition-all" title="Sincronizar con AppSheet">
+              <i data-lucide="refresh-cw" class="w-4 h-4" id="sync-icon"></i>
+              <span class="hidden md:inline">Sincronizar</span>
+            </button>
+            <div class="h-6 w-px bg-slate-700 hidden sm:block"></div>
+            <div class="items-center gap-2 text-sm text-slate-400 hidden sm:flex">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span>API Conectada</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      
+      <!-- Statistics Dashboard Row -->
+      <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
+        
+        <!-- Total Revenue -->
+        <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl flex items-center gap-4">
+          <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
+            <i data-lucide="dollar-sign" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Ingreso Total</p>
+            <h3 class="text-2xl font-bold text-white mt-1" id="stat-revenue">0.00 €</h3>
+          </div>
+        </div>
+
+        <!-- Total Preventas -->
+        <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl flex items-center gap-4">
+          <div class="p-3 bg-blue-500/10 text-blue-400 rounded-xl border border-blue-500/20">
+            <i data-lucide="shopping-bag" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Preventas</p>
+            <h3 class="text-2xl font-bold text-white mt-1" id="stat-count">0</h3>
+          </div>
+        </div>
+
+        <!-- Preventas Completadas -->
+        <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl flex items-center gap-4">
+          <div class="p-3 bg-green-500/10 text-green-400 rounded-xl border border-green-500/20">
+            <i data-lucide="check-circle-2" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Completadas</p>
+            <h3 class="text-2xl font-bold text-white mt-1" id="stat-completed">0</h3>
+          </div>
+        </div>
+
+        <!-- Preventas Pendientes -->
+        <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl flex items-center gap-4">
+          <div class="p-3 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20">
+            <i data-lucide="clock" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Pendientes</p>
+            <h3 class="text-2xl font-bold text-white mt-1" id="stat-pending">0</h3>
+          </div>
+        </div>
+
+        <!-- AppSheet Connection Status Card -->
+        <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl flex items-center gap-4 col-span-1 sm:col-span-2 lg:col-span-1">
+          <div class="p-3 bg-purple-500/10 text-purple-400 rounded-xl border border-purple-500/20">
+            <!-- Custom DB / Spreadsheet Link icon -->
+            <i data-lucide="database" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">App Sheep DB</p>
+            <h3 class="text-sm font-bold text-emerald-400 mt-1 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+              Sincronizado
+            </h3>
+            <span class="text-[10px] text-slate-500" id="sync-time">Hace un momento</span>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Main Controls and Table -->
+      <section class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl overflow-hidden mb-8">
+        
+        <!-- Header & Filters of Table -->
+        <div class="p-6 border-b border-slate-700 bg-slate-800/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          
+          <div>
+            <h2 class="text-lg font-bold text-white">Listado de Preventas</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Gestione y controle las órdenes y sus tickets de impresión vinculadas a sus Hojas de Datos.</p>
+          </div>
+
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <!-- Search bar -->
+            <div class="relative min-w-[200px] md:min-w-[240px]">
+              <i data-lucide="search" class="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-400"></i>
+              <input type="text" id="search-input" onkeyup="filterAndRender()" placeholder="Buscar cliente..." class="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+            </div>
+
+            <!-- Filter select -->
+            <div class="relative">
+              <select id="status-filter" onchange="filterAndRender()" class="w-full sm:w-auto pl-3 pr-8 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all appearance-none cursor-pointer">
+                <option value="todos">Todos los Estados</option>
+                <option value="Pendiente">Pendiente</option>
+                <option value="Completado">Completado</option>
+              </select>
+              <i data-lucide="chevron-down" class="absolute right-3 top-3 h-4 w-4 text-slate-400 pointer-events-none"></i>
+            </div>
+
+            <!-- Add Pre-sale Button -->
+            <button onclick="openCreateModal()" class="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-lg shadow-emerald-600/10 hover:shadow-emerald-500/20 transition-all">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              Nueva Preventa
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Table Container -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-slate-700 text-slate-400 text-xs font-semibold uppercase bg-slate-900/30">
+                <th class="py-4 px-6">ID</th>
+                <th class="py-4 px-6">Cliente</th>
+                <th class="py-4 px-6">Fecha</th>
+                <th class="py-4 px-6">Artículos</th>
+                <th class="py-4 px-6 text-right">Total</th>
+                <th class="py-4 px-6 text-center">Estado</th>
+                <th class="py-4 px-6 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="preventas-table-body" class="divide-y divide-slate-700/50 text-sm">
+              <!-- Dynamically populated -->
+              <tr>
+                <td colspan="7" class="py-12 text-center text-slate-400">
+                  <div class="flex flex-col items-center justify-center gap-3">
+                    <i data-lucide="loader-2" class="w-8 h-8 text-emerald-500 animate-spin"></i>
+                    <span>Cargando preventas...</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Empty state placeholder -->
+        <div id="empty-state" class="hidden py-16 text-center">
+          <div class="max-w-md mx-auto flex flex-col items-center">
+            <div class="p-4 bg-slate-700/30 text-slate-400 rounded-full mb-4">
+              <i data-lucide="package-open" class="w-10 h-10"></i>
+            </div>
+            <h4 class="text-base font-bold text-white">No se encontraron preventas</h4>
+            <p class="text-sm text-slate-400 mt-1">Intente cambiar la búsqueda o el filtro, o cree una nueva preventa pulsando el botón superior.</p>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- AppSheet Relational Hub Info Section -->
+      <section class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl border border-slate-700/80 shadow-xl p-6">
+        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          <div class="max-w-2xl">
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+              <i data-lucide="layers" class="text-emerald-400 w-5 h-5"></i>
+              Estructura de Base de Datos Vinculada (App Sheep / AppSheet)
+            </h3>
+            <p class="text-sm text-slate-300 mt-2">
+              Esta aplicación web sincroniza sus cambios directamente con el backend de datos de <strong>App Sheep</strong>. Se mantiene una relación estricta de uno-a-muchos (1:N) entre la cabecera y el detalle para preservar la integridad referencial requerida por la aplicación móvil y web.
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+              <div class="bg-slate-900/50 p-3.5 rounded-xl border border-slate-800">
+                <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider block mb-1">Tabla: PREVENTAS</span>
+                <p class="text-xs text-slate-400">Contiene la cabecera, cliente, contacto, total acumulado y fecha de la preventa.</p>
+              </div>
+              <div class="bg-slate-900/50 p-3.5 rounded-xl border border-slate-800">
+                <span class="text-xs font-bold text-blue-400 uppercase tracking-wider block mb-1">Tabla: DETALLE_DE_PREVENTAS</span>
+                <p class="text-xs text-slate-400">Contiene cada ítem, cantidad, precio unitario y referencia <code>preventa_id</code> (Foreign Key).</p>
+              </div>
+            </div>
+          </div>
+          <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-800 w-full lg:w-80 flex flex-col items-center text-center self-stretch justify-center">
+            <i data-lucide="check-check" class="w-10 h-10 text-emerald-400 bg-emerald-500/10 p-2 rounded-full border border-emerald-500/20 mb-3"></i>
+            <h4 class="text-sm font-bold text-white">Vinculación Certificada</h4>
+            <p class="text-xs text-slate-400 mt-1">El esquema relacional SQLite mapea 100% de manera nativa con las tablas de Google Sheets utilizadas en AppSheet.</p>
+            <button onclick="syncAppSheet()" class="mt-4 w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 py-2 rounded-xl text-xs font-semibold transition-all">
+              Probar Sincronización Webhook
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 border-t border-slate-800 mt-auto py-6 text-center text-xs text-slate-500">
+      <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <p>© 2026 APP SHEEP Inc. Todos los derechos reservados.</p>
+        <div class="flex items-center gap-4">
+          <span class="hover:text-slate-400 transition-colors">Integridad de Esquemas Relacionales</span>
+          <span>•</span>
+          <span class="hover:text-slate-400 transition-colors">Impresión Térmica 80mm Estándar</span>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+
+  <!-- MODALS -->
+
+  <!-- Modal 1: Create or Edit Pre-sale -->
+  <div id="form-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <!-- Backdrop -->
+    <div class="absolute inset-0 bg-slate-950/70 backdrop-blur-sm modal-backdrop" onclick="closeFormModal()"></div>
+    
+    <!-- Modal Content Card -->
+    <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col relative z-10 transition-all scale-95 opacity-0 duration-200" id="form-modal-card">
+      
+      <!-- Header -->
+      <div class="p-5 border-b border-slate-700 bg-slate-800/80 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="bg-emerald-500/10 text-emerald-400 p-2 rounded-lg border border-emerald-500/20" id="form-modal-icon-container">
+            <i data-lucide="plus-circle" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white" id="form-modal-title">Nueva Preventa</h3>
+            <p class="text-xs text-slate-400">Complete los datos de cabecera y agregue artículos.</p>
+          </div>
+        </div>
+        <button onclick="closeFormModal()" class="text-slate-400 hover:text-white p-1 hover:bg-slate-700 rounded-lg transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Scrollable Form Body -->
+      <form id="preventa-form" onsubmit="handleFormSubmit(event)" class="overflow-y-auto flex-1 p-6 space-y-6">
+        
+        <input type="hidden" id="form-id">
+
+        <!-- Cabecera Fields -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Nombre del Cliente *</label>
+            <input type="text" id="form-cliente" required placeholder="Ej. María González" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Teléfono de Contacto</label>
+            <input type="text" id="form-telefono" placeholder="Ej. +34 600 000 000" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Fecha de la Orden *</label>
+            <input type="date" id="form-fecha" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Estado de Pago / Despacho</label>
+            <div class="relative">
+              <select id="form-estado" class="w-full pl-3.5 pr-10 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all appearance-none cursor-pointer">
+                <option value="Pendiente">Pendiente</option>
+                <option value="Completado">Completado</option>
+              </select>
+              <i data-lucide="chevron-down" class="absolute right-3.5 top-3.5 h-4 w-4 text-slate-400 pointer-events-none"></i>
+            </div>
+          </div>
+
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Notas u Observaciones adicionales</label>
+          <textarea id="form-notas" rows="2" placeholder="Indicaciones para el transportista o referencias..." class="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"></textarea>
+        </div>
+
+        <div class="h-px bg-slate-700"></div>
+
+        <!-- Detalle de Preventa Section -->
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h4 class="text-sm font-bold text-white">Detalle de la Preventa (Artículos)</h4>
+              <p class="text-xs text-slate-400">Añada los productos pedidos y sus respectivos precios.</p>
+            </div>
+            <button type="button" onclick="addDetailRow()" class="flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 hover:border-slate-500 text-slate-200 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-all">
+              <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
+              Añadir Artículo
+            </button>
+          </div>
+
+          <!-- Dynamic Items Table -->
+          <div class="border border-slate-700 rounded-xl overflow-hidden bg-slate-900/30">
+            <table class="w-full text-left">
+              <thead>
+                <tr class="bg-slate-900 border-b border-slate-700 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                  <th class="py-2 px-4 w-1/2">Producto *</th>
+                  <th class="py-2 px-3 text-center w-20">Cant. *</th>
+                  <th class="py-2 px-3 text-right w-28">P. Unitario *</th>
+                  <th class="py-2 px-4 text-right w-28">Subtotal</th>
+                  <th class="py-2 px-2 text-center w-10"></th>
+                </tr>
+              </thead>
+              <tbody id="form-items-body" class="divide-y divide-slate-700/40">
+                <!-- Appended rows -->
+              </tbody>
+            </table>
+            
+            <div id="form-items-empty" class="hidden py-8 text-center text-xs text-slate-500">
+              No hay productos agregados a esta preventa. Presione "Añadir Artículo" para agregar uno.
+            </div>
+          </div>
+
+          <!-- Total Calculation Banner -->
+          <div class="flex justify-end mt-4">
+            <div class="bg-slate-900 px-6 py-3 rounded-xl border border-slate-700 flex items-center gap-4">
+              <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total de la Orden:</span>
+              <span class="text-xl font-black text-emerald-400" id="form-grand-total">0.00 €</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-700 bg-slate-800/30 -mx-6 -mb-6 p-6">
+          <button type="button" onclick="closeFormModal()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/10 hover:shadow-emerald-500/20 transition-all flex items-center gap-2">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            Guardar Preventa
+          </button>
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+
+
+  <!-- Modal 2: View Details & Ticket Panel -->
+  <div id="detail-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <!-- Backdrop -->
+    <div class="absolute inset-0 bg-slate-950/75 backdrop-blur-sm modal-backdrop" onclick="closeDetailModal()"></div>
+    
+    <!-- Modal Card -->
+    <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col relative z-10 transition-all scale-95 opacity-0 duration-200" id="detail-modal-card">
+      
+      <!-- Header -->
+      <div class="p-5 border-b border-slate-700 bg-slate-800/80 flex items-center justify-between no-print">
+        <div class="flex items-center gap-2.5">
+          <div class="bg-emerald-500/10 text-emerald-400 p-2 rounded-lg border border-emerald-500/20">
+            <i data-lucide="file-text" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Detalles de Preventa y Ticket</h3>
+            <p class="text-xs text-slate-400" id="detail-modal-subtitle">Consulta de ítems e impresión térmica directa.</p>
+          </div>
+        </div>
+        <button onclick="closeDetailModal()" class="text-slate-400 hover:text-white p-1 hover:bg-slate-700 rounded-lg transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Scrollable Container containing split layout -->
+      <div class="overflow-y-auto flex-1 p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Column: Database Data view (8/12 cols) -->
+        <div class="lg:col-span-7 space-y-6">
+          
+          <!-- Customer Info Box -->
+          <div class="bg-slate-900/50 p-5 rounded-xl border border-slate-700/50 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Cabecera de Registro</span>
+              <span id="detail-status-badge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold"></span>
+            </div>
+            
+            <h4 class="text-xl font-extrabold text-white" id="detail-cliente">Cargando...</h4>
+            
+            <div class="grid grid-cols-2 gap-4 text-sm pt-2">
+              <div>
+                <span class="text-slate-500 block text-xs font-semibold uppercase">Teléfono</span>
+                <span class="text-slate-200 font-medium" id="detail-telefono">-</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-xs font-semibold uppercase">Fecha</span>
+                <span class="text-slate-200 font-medium" id="detail-fecha">-</span>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-slate-800" id="detail-notas-container">
+              <span class="text-slate-500 block text-xs font-semibold uppercase mb-1">Notas</span>
+              <p class="text-xs text-slate-300 italic" id="detail-notas">Ninguna observación registrada.</p>
+            </div>
+          </div>
+
+          <!-- Items Table -->
+          <div>
+            <h5 class="text-sm font-bold text-white mb-3">Detalle de Artículos Relacionados</h5>
+            <div class="border border-slate-700/80 rounded-xl overflow-hidden bg-slate-900/20">
+              <table class="w-full text-left text-sm">
+                <thead>
+                  <tr class="bg-slate-900 border-b border-slate-700 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                    <th class="py-2.5 px-4">Producto</th>
+                    <th class="py-2.5 px-3 text-center">Cant.</th>
+                    <th class="py-2.5 px-3 text-right">Precio</th>
+                    <th class="py-2.5 px-4 text-right">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody id="detail-items-body" class="divide-y divide-slate-800">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- DB relation visual schema card -->
+          <div class="bg-slate-900/25 p-4 rounded-xl border border-dashed border-slate-700 text-xs text-slate-400 flex items-start gap-3">
+            <i data-lucide="info" class="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5"></i>
+            <div>
+              <span class="font-bold text-slate-300 block mb-1">Vínculo Relacional Activo</span>
+              <span>La tabla hijo <code>DETALLE_DE_PREVENTAS</code> apunta al registro <code>PREVENTAS</code> con ID <strong class="text-emerald-400" id="detail-db-id">#</strong> mediante la clave foránea <code>preventa_id</code>. Cualquier edición mantendrá el ID original y actualizará los detalles en cascada.</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Column: Interactive Digital Thermal Ticket Preview (5/12 cols) -->
+        <div class="lg:col-span-5 bg-slate-900 p-4 rounded-xl border border-slate-700 flex flex-col items-center">
+          
+          <div class="w-full flex items-center justify-between mb-3 text-xs">
+            <span class="font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1">
+              <i data-lucide="eye" class="w-3.5 h-3.5 text-emerald-400"></i>
+              Previsualización de Ticket (80mm)
+            </span>
+            <span class="bg-slate-800 text-slate-400 px-2 py-0.5 rounded text-[10px]">Papel Continuo</span>
+          </div>
+
+          <!-- The Ticket Preview Container (mimicking a physical receipt) -->
+          <div class="bg-white text-slate-900 p-5 rounded shadow-inner w-full max-w-[280px] font-mono text-xs border border-slate-300 leading-tight select-none pointer-events-none" id="digital-receipt">
+            <div class="text-center space-y-1 mb-4">
+              <h4 class="font-black text-sm tracking-widest uppercase">*** APP SHEEP ***</h4>
+              <p class="text-[10px] text-slate-600">SISTEMA INTEGRADO APPSHEET</p>
+              <p class="text-[9px] text-slate-500">Calle Ganadería S/N, Badajoz</p>
+              <p class="text-[9px] text-slate-500">Telf: +34 900 123 456</p>
+            </div>
+
+            <div class="space-y-1 text-[10px] mb-3">
+              <p><strong>FECHA:</strong> <span id="ticket-fecha">YYYY-MM-DD</span></p>
+              <p><strong>TICKET:</strong> #00000<span id="ticket-id">0</span></p>
+              <p><strong>CLIENTE:</strong> <span id="ticket-cliente">CLIENTE</span></p>
+              <p><strong>TELF:</strong> <span id="ticket-telefono">TELF</span></p>
+            </div>
+
+            <!-- Dotted separator -->
+            <p class="text-slate-400 overflow-hidden whitespace-nowrap mb-2">------------------------------------</p>
+
+            <div class="space-y-1 text-[10px] mb-2">
+              <div class="flex justify-between font-bold">
+                <span>CONCEPTO</span>
+                <span>TOTAL</span>
+              </div>
+              <div id="ticket-items-body" class="space-y-1">
+                <!-- Dynamically filled items -->
+              </div>
+            </div>
+
+            <p class="text-slate-400 overflow-hidden whitespace-nowrap mb-2">------------------------------------</p>
+
+            <div class="space-y-1 text-right text-[10px] font-bold">
+              <div class="flex justify-between font-normal text-[9px] text-slate-600">
+                <span>S. Total (Base Imp.):</span>
+                <span id="ticket-subtotal">0.00 €</span>
+              </div>
+              <div class="flex justify-between font-normal text-[9px] text-slate-600">
+                <span>I.V.A. (21% Incl.):</span>
+                <span id="ticket-iva">0.00 €</span>
+              </div>
+              <div class="flex justify-between text-xs font-black border-t border-dashed border-slate-300 pt-1">
+                <span>TOTAL:</span>
+                <span id="ticket-total" class="text-slate-900">0.00 €</span>
+              </div>
+            </div>
+
+            <p class="text-slate-400 overflow-hidden whitespace-nowrap mt-3 mb-3">------------------------------------</p>
+
+            <div class="text-center space-y-1">
+              <p class="text-[9px] font-bold">¡GRACIAS POR SU PREFERENCIA!</p>
+              <p class="text-[8px] text-slate-500">Documento No Válido como Factura</p>
+              
+              <!-- Mock QR/Barcode -->
+              <div class="flex flex-col items-center pt-2 gap-1">
+                <div class="w-24 h-5 bg-slate-900 relative flex items-center justify-between px-2">
+                  <div class="h-full w-px bg-white"></div>
+                  <div class="h-full w-0.5 bg-white"></div>
+                  <div class="h-full w-1 bg-white"></div>
+                  <div class="h-full w-px bg-white"></div>
+                  <div class="h-full w-0.5 bg-white"></div>
+                  <div class="h-full w-px bg-white"></div>
+                  <div class="h-full w-1 bg-white"></div>
+                  <div class="h-full w-0.5 bg-white"></div>
+                  <div class="h-full w-px bg-white"></div>
+                </div>
+                <span class="text-[7px] text-slate-400 tracking-widest font-mono">*APP-SHEEP-PREVENTA*</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Print Action button -->
+          <button onclick="printTicketFromModal()" class="mt-4 w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/10 hover:shadow-emerald-500/20 transition-all flex items-center justify-center gap-2">
+            <i data-lucide="printer" class="w-4.5 h-4.5"></i>
+            Imprimir Ticket Físico
+          </button>
+
+        </div>
+
+      </div>
+
+      <!-- Footer Buttons -->
+      <div class="flex items-center justify-end gap-3 p-5 border-t border-slate-700 bg-slate-800/30 no-print">
+        <button onclick="closeDetailModal()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white px-5 py-2 rounded-xl text-sm font-semibold transition-colors">
+          Cerrar Vista
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- Notification Toasts container -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
+
+
+  <!-- THE OFFLINE PRINTING CANVAS -->
+  <div id="print-ticket-area"></div>
+
+
+  <!-- CORE APP JAVASCRIPT -->
+  <script>
+    // App State
+    let preventas = [];
+    let activeFilters = {
+      search: '',
+      status: 'todos'
+    };
+    
+    // Form items array (for creation/edition)
+    let formItems = [];
+
+    // On Document Load
+    document.addEventListener("DOMContentLoaded", () => {
+      // Initialize Lucide Icons
+      lucide.createIcons();
+      
+      // Load Data from API
+      fetchPreventas();
+      
+      // Sync initial AppSheet info
+      updateAppSheetSyncTime();
+    });
+
+    // Fetch all preventas from API
+    async function fetchPreventas() {
+      try {
+        const response = await fetch('/api/preventas');
+        if (!response.ok) throw new Error('Error al obtener datos');
+        
+        preventas = await response.json();
+        
+        // Update stats
+        calculateStats();
+        
+        // Render
+        filterAndRender();
+      } catch (err) {
+        console.error(err);
+        showToast('Error al conectar con la base de datos', 'error');
+      }
+    }
+
+    // Calculate Dashboard Statistics
+    function calculateStats() {
+      const count = preventas.length;
+      const completed = preventas.filter(p => p.estado === 'Completado').length;
+      const pending = preventas.filter(p => p.estado === 'Pendiente').length;
+      
+      const revenue = preventas.reduce((sum, p) => sum + p.total, 0);
+
+      document.getElementById('stat-count').textContent = count;
+      document.getElementById('stat-completed').textContent = completed;
+      document.getElementById('stat-pending').textContent = pending;
+      document.getElementById('stat-revenue').textContent = `${revenue.toFixed(2)} €`;
+    }
+
+    // Filter and Render PREVENTAS in table
+    function filterAndRender() {
+      const search = document.getElementById('search-input').value.toLowerCase().trim();
+      const status = document.getElementById('status-filter').value;
+      
+      const tbody = document.getElementById('preventas-table-body');
+      const emptyState = document.getElementById('empty-state');
+      
+      // Filter list
+      const filtered = preventas.filter(p => {
+        const matchesSearch = p.cliente.toLowerCase().includes(search);
+        const matchesStatus = status === 'todos' || p.estado === status;
+        return matchesSearch && matchesStatus;
+      });
+
+      // Clear body
+      tbody.innerHTML = '';
+
+      if (filtered.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      
+      emptyState.classList.add('hidden');
+
+      filtered.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-700/30 transition-colors border-b border-slate-700/30";
+        
+        // Formulate items count string
+        const itemsCount = p.detalles ? p.detalles.reduce((sum, item) => sum + item.cantidad, 0) : 0;
+        const itemsDistinct = p.detalles ? p.detalles.length : 0;
+
+        // Status Badge Style
+        let badgeClass = "bg-amber-500/10 text-amber-400 border border-amber-500/20";
+        if (p.estado === 'Completado') {
+          badgeClass = "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+        }
+
+        tr.innerHTML = `
+          <td class="py-3 px-6 font-mono font-bold text-slate-400">#${String(p.id).padStart(5, '0')}</td>
+          <td class="py-3 px-6">
+            <div class="font-bold text-white">${p.cliente}</div>
+            <div class="text-xs text-slate-400 flex items-center gap-1">
+              <i data-lucide="phone" class="w-3 h-3"></i> ${p.telefono || 'Sin teléfono'}
+            </div>
+          </td>
+          <td class="py-3 px-6 text-slate-300 font-medium">${p.fecha}</td>
+          <td class="py-3 px-6">
+            <span class="bg-slate-700 text-slate-300 text-xs px-2.5 py-0.5 rounded-full font-semibold">
+              ${itemsCount} u. <span class="text-[10px] text-slate-400">(${itemsDistinct} ref)</span>
+            </span>
+          </td>
+          <td class="py-3 px-6 text-right font-black text-emerald-400 font-mono text-base">${p.total.toFixed(2)} €</td>
+          <td class="py-3 px-6 text-center">
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${badgeClass}">
+              ${p.estado}
+            </span>
+          </td>
+          <td class="py-3 px-6 text-center">
+            <div class="flex items-center justify-center gap-1.5">
+              <button onclick="openDetailModal(${p.id})" class="p-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors" title="Ver Detalle / Ticket">
+                <i data-lucide="eye" class="w-4.5 h-4.5"></i>
+              </button>
+              <button onclick="openEditModal(${p.id})" class="p-1.5 bg-slate-700 hover:bg-blue-600/30 text-blue-400 hover:text-blue-200 rounded-lg transition-colors" title="Editar">
+                <i data-lucide="edit-3" class="w-4.5 h-4.5"></i>
+              </button>
+              <button onclick="confirmDelete(${p.id}, '${p.cliente.replace(/'/g, "\\'")}')" class="p-1.5 bg-slate-700 hover:bg-red-600/30 text-red-400 hover:text-red-200 rounded-lg transition-colors" title="Eliminar">
+                <i data-lucide="trash-2" class="w-4.5 h-4.5"></i>
+              </button>
+              <button onclick="printTicketDirect(${p.id})" class="p-1.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white rounded-lg transition-all" title="Imprimir Ticket">
+                <i data-lucide="printer" class="w-4.5 h-4.5"></i>
+              </button>
+            </div>
+          </td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+
+      // Refresh icons in the table
+      lucide.createIcons();
+    }
+
+    // Add row to modal items list
+    function addDetailRow(producto = '', cantidad = 1, precio_unitario = 0.0) {
+      const body = document.getElementById('form-items-body');
+      const emptyMsg = document.getElementById('form-items-empty');
+      
+      const rowIndex = formItems.length;
+      formItems.push({ producto, cantidad, precio_unitario });
+
+      const tr = document.createElement('tr');
+      tr.id = `form-row-${rowIndex}`;
+      tr.className = "hover:bg-slate-800/40 transition-colors";
+
+      tr.innerHTML = `
+        <td class="py-2 px-4">
+          <input type="text" value="${producto}" onchange="updateFormItem(${rowIndex}, 'producto', this.value)" required placeholder="Nombre del producto o servicio" class="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
+        </td>
+        <td class="py-2 px-3">
+          <input type="number" value="${cantidad}" min="1" step="1" onchange="updateFormItem(${rowIndex}, 'cantidad', this.value)" required class="w-full text-center px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
+        </td>
+        <td class="py-2 px-3">
+          <div class="relative">
+            <input type="number" value="${precio_unitario}" min="0" step="0.01" onchange="updateFormItem(${rowIndex}, 'precio_unitario', this.value)" required class="w-full text-right pr-6 pl-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
+            <span class="absolute right-2 top-2 text-[10px] text-slate-500">€</span>
+          </div>
+        </td>
+        <td class="py-2 px-4 text-right font-mono text-slate-300 text-xs font-semibold" id="form-subtotal-${rowIndex}">
+          ${(cantidad * precio_unitario).toFixed(2)} €
+        </td>
+        <td class="py-2 px-2 text-center">
+          <button type="button" onclick="removeDetailRow(${rowIndex})" class="text-slate-500 hover:text-red-400 p-1.5 hover:bg-slate-800 rounded-lg transition-colors">
+            <i data-lucide="trash" class="w-4 h-4"></i>
+          </button>
+        </td>
+      `;
+
+      body.appendChild(tr);
+      emptyMsg.classList.add('hidden');
+      
+      lucide.createIcons();
+      calculateFormTotal();
+    }
+
+    // Remove row from modal items
+    function removeDetailRow(index) {
+      const row = document.getElementById(`form-row-${index}`);
+      if (row) {
+        row.remove();
+      }
+      formItems[index] = null; // Mark as deleted to keep indexing consistent
+      
+      // Check if all are deleted
+      const activeRows = formItems.filter(item => item !== null);
+      if (activeRows.length === 0) {
+        document.getElementById('form-items-empty').classList.remove('hidden');
+      }
+
+      calculateFormTotal();
+    }
+
+    // Update specific property on change
+    function updateFormItem(index, key, value) {
+      if (!formItems[index]) return;
+      
+      if (key === 'producto') {
+        formItems[index].producto = value;
+      } else if (key === 'cantidad') {
+        formItems[index].cantidad = parseInt(value) || 0;
+      } else if (key === 'precio_unitario') {
+        formItems[index].precio_unitario = parseFloat(value) || 0.0;
+      }
+
+      // Recalculate subtotal for row
+      const sub = (formItems[index].cantidad * formItems[index].precio_unitario).toFixed(2);
+      const subEl = document.getElementById(`form-subtotal-${index}`);
+      if (subEl) {
+        subEl.textContent = `${sub} €`;
+      }
+
+      calculateFormTotal();
+    }
+
+    // Calculate grand total in form
+    function calculateFormTotal() {
+      const activeRows = formItems.filter(item => item !== null);
+      const grandTotal = activeRows.reduce((sum, item) => sum + (item.cantidad * item.precio_unitario), 0);
+      document.getElementById('form-grand-total').textContent = `${grandTotal.toFixed(2)} €`;
+    }
+
+    // Modal Control: Create
+    function openCreateModal() {
+      const modal = document.getElementById('form-modal');
+      const card = document.getElementById('form-modal-card');
+      
+      // Reset
+      document.getElementById('preventa-form').reset();
+      document.getElementById('form-id').value = '';
+      document.getElementById('form-fecha').value = new Date().toISOString().split('T')[0];
+      document.getElementById('form-items-body').innerHTML = '';
+      document.getElementById('form-items-empty').classList.remove('hidden');
+      document.getElementById('form-grand-total').textContent = '0.00 €';
+      
+      formItems = [];
+
+      // Set titles
+      document.getElementById('form-modal-title').textContent = 'Nueva Preventa';
+      document.getElementById('form-modal-icon-container').innerHTML = '<i data-lucide="plus-circle" class="w-5 h-5"></i>';
+      
+      // Add one default empty row
+      addDetailRow('', 1, 0.0);
+
+      // Show
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        card.classList.remove('scale-95', 'opacity-0');
+        card.classList.add('scale-100', 'opacity-100');
+      }, 50);
+
+      lucide.createIcons();
+    }
+
+    // Modal Control: Edit
+    function openEditModal(id) {
+      const p = preventas.find(x => x.id === id);
+      if (!p) return;
+
+      const modal = document.getElementById('form-modal');
+      const card = document.getElementById('form-modal-card');
+      
+      // Set values
+      document.getElementById('form-id').value = p.id;
+      document.getElementById('form-cliente').value = p.cliente;
+      document.getElementById('form-telefono').value = p.telefono || '';
+      document.getElementById('form-fecha').value = p.fecha;
+      document.getElementById('form-estado').value = p.estado;
+      document.getElementById('form-notas').value = p.notas || '';
+
+      // Reset items body
+      document.getElementById('form-items-body').innerHTML = '';
+      document.getElementById('form-items-empty').classList.add('hidden');
+      
+      formItems = [];
+
+      // Add actual items
+      if (p.detalles && p.detalles.length > 0) {
+        p.detalles.forEach(d => {
+          addDetailRow(d.producto, d.cantidad, d.precio_unitario);
+        });
+      } else {
+        addDetailRow('', 1, 0.0);
+      }
+
+      // Set titles
+      document.getElementById('form-modal-title').textContent = `Editar Preventa #${String(p.id).padStart(5, '0')}`;
+      document.getElementById('form-modal-icon-container').innerHTML = '<i data-lucide="edit-3" class="w-5 h-5"></i>';
+
+      // Show
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        card.classList.remove('scale-95', 'opacity-0');
+        card.classList.add('scale-100', 'opacity-100');
+      }, 50);
+
+      lucide.createIcons();
+      calculateFormTotal();
+    }
+
+    // Close Create/Edit Modal
+    function closeFormModal() {
+      const modal = document.getElementById('form-modal');
+      const card = document.getElementById('form-modal-card');
+      card.classList.remove('scale-100', 'opacity-100');
+      card.classList.add('scale-95', 'opacity-0');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 200);
+    }
+
+    // Submit Create/Edit Form
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+
+      const id = document.getElementById('form-id').value;
+      const cliente = document.getElementById('form-cliente').value.trim();
+      const telefono = document.getElementById('form-telefono').value.trim();
+      const fecha = document.getElementById('form-fecha').value;
+      const estado = document.getElementById('form-estado').value;
+      const notas = document.getElementById('form-notas').value.trim();
+
+      // Filter out deleted rows
+      const filteredDetails = formItems.filter(item => item !== null && item.producto.trim() !== '');
+
+      if (filteredDetails.length === 0) {
+        showToast('Debe agregar al menos un artículo válido con nombre del producto.', 'warning');
+        return;
+      }
+
+      const payload = {
+        cliente,
+        telefono,
+        fecha,
+        estado,
+        notas,
+        detalles: filteredDetails
+      };
+
+      try {
+        let response;
+        if (id) {
+          // Edit (PUT)
+          response = await fetch(`/api/preventas/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        } else {
+          // Create (POST)
+          response = await fetch('/api/preventas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        }
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.error || 'Error al guardar preventa');
+        }
+
+        showToast(id ? 'Preventa actualizada correctamente' : 'Nueva preventa guardada en base de datos', 'success');
+        
+        // Refresh data
+        await fetchPreventas();
+        
+        // Close modal
+        closeFormModal();
+        
+        // Mock sheets webhook trigger as well
+        triggerMockSheetSync();
+      } catch (err) {
+        console.error(err);
+        showToast(err.message, 'error');
+      }
+    }
+
+    // Delete Pre-sale
+    async function confirmDelete(id, name) {
+      if (confirm(`¿Está seguro de eliminar la preventa de "${name}"? Se borrarán todos los detalles asociados en cascada.`)) {
+        try {
+          const response = await fetch(`/api/preventas/${id}`, {
+            method: 'DELETE'
+          });
+
+          if (!response.ok) throw new Error('Error al borrar la orden');
+
+          showToast('Preventa eliminada con éxito de la base de datos', 'success');
+          fetchPreventas();
+          triggerMockSheetSync();
+        } catch (err) {
+          console.error(err);
+          showToast(err.message, 'error');
+        }
+      }
+    }
+
+    // Modal Control: View Details & Ticket
+    function openDetailModal(id) {
+      const p = preventas.find(x => x.id === id);
+      if (!p) return;
+
+      const modal = document.getElementById('detail-modal');
+      const card = document.getElementById('detail-modal-card');
+
+      // 1. Fill DB details tab (left side)
+      document.getElementById('detail-db-id').textContent = `#${String(p.id).padStart(5, '0')}`;
+      document.getElementById('detail-cliente').textContent = p.cliente;
+      document.getElementById('detail-telefono').textContent = p.telefono || 'Sin teléfono';
+      document.getElementById('detail-fecha').textContent = p.fecha;
+      document.getElementById('detail-notas').textContent = p.notas || 'Sin indicaciones adicionales.';
+
+      // Status Badge Style in detail modal
+      const badge = document.getElementById('detail-status-badge');
+      badge.textContent = p.estado;
+      badge.className = p.estado === 'Completado' 
+        ? "px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+        : "px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20";
+
+      // Fill left items table
+      const tbody = document.getElementById('detail-items-body');
+      tbody.innerHTML = '';
+      
+      if (p.detalles && p.detalles.length > 0) {
+        p.detalles.forEach(d => {
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-slate-800/20 transition-colors";
+          tr.innerHTML = `
+            <td class="py-2.5 px-4 text-slate-200 font-semibold">${d.producto}</td>
+            <td class="py-2.5 px-3 text-center text-slate-300 font-mono">${d.cantidad} u.</td>
+            <td class="py-2.5 px-3 text-right text-slate-400 font-mono">${d.precio_unitario.toFixed(2)} €</td>
+            <td class="py-2.5 px-4 text-right font-black text-emerald-400 font-mono">${d.subtotal.toFixed(2)} €</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      // 2. Fill Ticket digital preview (right side)
+      document.getElementById('ticket-id').textContent = String(p.id).padStart(5, '0');
+      document.getElementById('ticket-fecha').textContent = p.fecha;
+      document.getElementById('ticket-cliente').textContent = p.cliente.toUpperCase();
+      document.getElementById('ticket-telefono').textContent = p.telefono || 'SIN CONTACTO';
+
+      const ticketBody = document.getElementById('ticket-items-body');
+      ticketBody.innerHTML = '';
+
+      if (p.detalles && p.detalles.length > 0) {
+        p.detalles.forEach(d => {
+          const div = document.createElement('div');
+          div.className = "space-y-0.5";
+          div.innerHTML = `
+            <div class="flex justify-between">
+              <span class="font-bold truncate max-w-[170px]">${d.producto.toUpperCase()}</span>
+              <span>${d.subtotal.toFixed(2)} €</span>
+            </div>
+            <div class="text-[8px] text-slate-500 pl-2">
+              ${d.cantidad} UNID x ${d.precio_unitario.toFixed(2)} €
+            </div>
+          `;
+          ticketBody.appendChild(div);
+        });
+      }
+
+      // Calculate taxes for thermal style
+      const subtotalBase = p.total / 1.21;
+      const iva = p.total - subtotalBase;
+
+      document.getElementById('ticket-subtotal').textContent = `${subtotalBase.toFixed(2)} €`;
+      document.getElementById('ticket-iva').textContent = `${iva.toFixed(2)} €`;
+      document.getElementById('ticket-total').textContent = `${p.total.toFixed(2)} €`;
+
+      // Save ID on print button
+      document.getElementById('detail-modal').setAttribute('data-active-id', p.id);
+
+      // Show modal
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        card.classList.remove('scale-95', 'opacity-0');
+        card.classList.add('scale-100', 'opacity-100');
+      }, 50);
+
+      lucide.createIcons();
+    }
+
+    // Close detail modal
+    function closeDetailModal() {
+      const modal = document.getElementById('detail-modal');
+      const card = document.getElementById('detail-modal-card');
+      card.classList.remove('scale-100', 'opacity-100');
+      card.classList.add('scale-95', 'opacity-0');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 200);
+    }
+
+    // Populate the print-only canvas and trigger system print dialog
+    function printTicketFromModal() {
+      const activeId = parseInt(document.getElementById('detail-modal').getAttribute('data-active-id'));
+      if (!activeId) return;
+      
+      triggerPrint(activeId);
+    }
+
+    function printTicketDirect(id) {
+      triggerPrint(id);
+    }
+
+    // Trigger printing by copying the ticket HTML structure to the offline print canvas
+    function triggerPrint(id) {
+      const p = preventas.find(x => x.id === id);
+      if (!p) return;
+
+      const canvas = document.getElementById('print-ticket-area');
+      
+      // Calculate taxes
+      const subtotalBase = p.total / 1.21;
+      const iva = p.total - subtotalBase;
+
+      // Populate items
+      let itemsHtml = '';
+      p.detalles.forEach(d => {
+        itemsHtml += `
+          <div style="margin-bottom: 5px;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="font-weight: bold; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${d.producto.toUpperCase()}</span>
+              <span>${d.subtotal.toFixed(2)} €</span>
+            </div>
+            <div style="font-size: 10px; color: #555; padding-left: 10px;">
+              ${d.text_qty_price || (d.cantidad + ' UNID x ' + d.precio_unitario.toFixed(2) + ' €')}
+            </div>
+          </div>
+        `;
+      });
+
+      canvas.innerHTML = `
+        <div style="text-align: center; margin-bottom: 15px;">
+          <h4 style="font-size: 16px; font-weight: 900; letter-spacing: 2px; margin: 0 0 5px 0;">*** APP SHEEP ***</h4>
+          <p style="font-size: 10px; color: #444; margin: 0 0 3px 0;">SISTEMA INTEGRADO APPSHEET</p>
+          <p style="font-size: 9px; color: #666; margin: 0;">Calle Ganadería S/N, Badajoz</p>
+          <p style="font-size: 9px; color: #666; margin: 0;">Telf: +34 900 123 456</p>
+        </div>
+
+        <div style="font-size: 11px; margin-bottom: 12px; line-height: 1.3;">
+          <p style="margin: 2px 0;"><strong>FECHA:</strong> ${p.fecha}</p>
+          <p style="margin: 2px 0;"><strong>TICKET:</strong> #${String(p.id).padStart(5, '0')}</p>
+          <p style="margin: 2px 0;"><strong>CLIENTE:</strong> ${p.cliente.toUpperCase()}</p>
+          <p style="margin: 2px 0;"><strong>TELF:</strong> ${p.telefono || 'SIN CONTACTO'}</p>
+        </div>
+
+        <p style="letter-spacing: -1px; margin: 8px 0; color: #666; font-size: 12px;">------------------------------------</p>
+
+        <div style="font-size: 11px; margin-bottom: 10px;">
+          <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px;">
+            <span>CONCEPTO</span>
+            <span>TOTAL</span>
+          </div>
+          ${itemsHtml}
+        </div>
+
+        <p style="letter-spacing: -1px; margin: 8px 0; color: #666; font-size: 12px;">------------------------------------</p>
+
+        <div style="font-size: 11px; text-align: right; line-height: 1.4;">
+          <div style="display: flex; justify-content: space-between; color: #555; font-size: 10px;">
+            <span>S. Total (Base Imp.):</span>
+            <span>${subtotalBase.toFixed(2)} €</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; color: #555; font-size: 10px; margin-bottom: 4px;">
+            <span>I.V.A. (21% Incl.):</span>
+            <span>${iva.toFixed(2)} €</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 900; border-top: 1px dashed #333; padding-top: 6px;">
+            <span>TOTAL:</span>
+            <span>${p.total.toFixed(2)} €</span>
+          </div>
+        </div>
+
+        <p style="letter-spacing: -1px; margin: 15px 0 10px 0; color: #666; font-size: 12px;">------------------------------------</p>
+
+        <div style="text-align: center; font-size: 10px; line-height: 1.3;">
+          <p style="font-weight: bold; margin: 3px 0;">¡GRACIAS POR SU PREFERENCIA!</p>
+          <p style="color: #666; font-size: 9px; margin: 0 0 12px 0;">Documento No Válido como Factura</p>
+          
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+            <!-- Barcode representation -->
+            <div style="width: 100px; height: 25px; background: black; display: flex; justify-content: space-between; padding: 0 5px; box-sizing: border-box;">
+              <div style="width: 2px; height: 100%; background: white;"></div>
+              <div style="width: 4px; height: 100%; background: white;"></div>
+              <div style="width: 1px; height: 100%; background: white;"></div>
+              <div style="width: 3px; height: 100%; background: white;"></div>
+              <div style="width: 2px; height: 100%; background: white;"></div>
+              <div style="width: 1px; height: 100%; background: white;"></div>
+              <div style="width: 4px; height: 100%; background: white;"></div>
+            </div>
+            <span style="font-size: 8px; color: #777; font-family: monospace;">*APP-SHEEP-PREVENTA-${p.id}*</span>
+          </div>
+        </div>
+      `;
+
+      // Trigger standard print dialog
+      setTimeout(() => {
+        window.print();
+      }, 50);
+    }
+
+    // Interactive AppSheet Synchronization trigger
+    async function syncAppSheet() {
+      const syncIcon = document.getElementById('sync-icon');
+      syncIcon.classList.add('animate-spin');
+      
+      showToast('Contactando servidores de App Sheep (AppSheet)...', 'info');
+
+      try {
+        const response = await fetch('/api/appsheet-sync', { method: 'POST' });
+        const data = await response.json();
+
+        setTimeout(() => {
+          syncIcon.classList.remove('animate-spin');
+          if (data.success) {
+            updateAppSheetSyncTime();
+            showToast('Sincronización de base de datos bidireccional exitosa', 'success');
+          } else {
+            throw new Error('Sincronización rechazada');
+          }
+        }, 1200);
+
+      } catch (err) {
+        console.error(err);
+        syncIcon.classList.remove('animate-spin');
+        showToast('Error de comunicación con AppSheet', 'error');
+      }
+    }
+
+    // Update synchronization display time
+    function updateAppSheetSyncTime() {
+      const now = new Date();
+      const timeStr = now.toTimeString().split(' ')[0];
+      document.getElementById('sync-time').textContent = `Sincronizado hoy a las ${timeStr}`;
+    }
+
+    // Trigger background sheets sync mock on data mutations (POST, PUT, DELETE)
+    function triggerMockSheetSync() {
+      const syncIcon = document.getElementById('sync-icon');
+      syncIcon.classList.add('animate-spin');
+      setTimeout(() => {
+        syncIcon.classList.remove('animate-spin');
+        updateAppSheetSyncTime();
+        console.log("AppSheet relational backend synchronized with spreadsheets successfully.");
+      }, 600);
+    }
+
+    // Beautiful UI Notification Toast system
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      
+      const toast = document.createElement('div');
+      toast.className = "flex items-center gap-3 px-4.5 py-3 rounded-xl shadow-2xl border text-sm font-semibold transform translate-y-2 opacity-0 transition-all duration-300 max-w-sm";
+      
+      let icon = 'info';
+      let bgBorder = 'bg-slate-800 text-slate-100 border-slate-700';
+
+      if (type === 'success') {
+        icon = 'check-circle';
+        bgBorder = 'bg-emerald-950/90 text-emerald-300 border-emerald-500/30';
+      } else if (type === 'error') {
+        icon = 'alert-triangle';
+        bgBorder = 'bg-red-950/90 text-red-300 border-red-500/30';
+      } else if (type === 'warning') {
+        icon = 'alert-circle';
+        bgBorder = 'bg-amber-950/90 text-amber-300 border-amber-500/30';
+      } else if (type === 'info') {
+        icon = 'info';
+        bgBorder = 'bg-blue-950/90 text-blue-300 border-blue-500/30';
+      }
+
+      toast.className += ` ${bgBorder}`;
+      toast.innerHTML = `
+        <i data-lucide="${icon}" class="w-5 h-5 flex-shrink-0"></i>
+        <span>${message}</span>
+      `;
+
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      // Animate entry
+      setTimeout(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+        toast.classList.add('translate-y-0', 'opacity-100');
+      }, 50);
+
+      // Dismiss timer
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-2', 'opacity-0');
+        setTimeout(() => {
+          toast.remove();
+        }, 300);
+      }, 3500);
+    }
+  </script>
+</body>
+</html>

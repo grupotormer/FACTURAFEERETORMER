@@ -568,6 +568,7 @@
           <!-- The Ticket Preview Container (mimicking a physical receipt) -->
           <div class="bg-white text-slate-900 p-5 rounded shadow-inner w-full max-w-[280px] font-mono text-xs border border-slate-300 leading-tight select-none pointer-events-none" id="digital-receipt">
             <div class="text-center space-y-1 mb-4">
+              <img src="Logoferre.png" alt="Logo" class="mx-auto h-12 object-contain mb-2">
               <h4 class="font-black text-sm tracking-widest uppercase">*** APP SHEEP ***</h4>
               <p class="text-[10px] text-slate-600">SISTEMA INTEGRADO APPSHEET</p>
               <p class="text-[9px] text-slate-500">Calle Ganadería S/N, Badajoz</p>
@@ -597,14 +598,6 @@
             <p class="text-slate-400 overflow-hidden whitespace-nowrap mb-2">------------------------------------</p>
 
             <div class="space-y-1 text-right text-[10px] font-bold">
-              <div class="flex justify-between font-normal text-[9px] text-slate-600">
-                <span>S. Total (Base Imp.):</span>
-                <span id="ticket-subtotal">0.00 €</span>
-              </div>
-              <div class="flex justify-between font-normal text-[9px] text-slate-600">
-                <span>I.V.A. (21% Incl.):</span>
-                <span id="ticket-iva">0.00 €</span>
-              </div>
               <div class="flex justify-between text-xs font-black border-t border-dashed border-slate-300 pt-1">
                 <span>TOTAL:</span>
                 <span id="ticket-total" class="text-slate-900">0.00 €</span>
@@ -725,16 +718,17 @@
           { id: '4', nombre: 'ACATHA SV SAS DE CV', telefono: '50376295120' }
         ]);
       }
-      if (lsGet(LS_KEYS.stock).length === 0) {
+      const existingStock = lsGet(LS_KEYS.stock);
+      if (existingStock.length === 0 || !existingStock[0].TextoBreveDelMaterial) {
         lsSet(LS_KEYS.stock, [
-          { material: 'Saco-01', precio: 45.00, concat: 'Saco de Alimento Premium Ovejas 25kg [Saco-01] - 45.00 €' },
-          { material: 'Sup-01', precio: 40.50, concat: 'Suplemento Vitamínico Ovino 5L [Sup-01] - 40.50 €' },
-          { material: 'Esq-01', precio: 210.00, concat: 'Esquiladora Profesional SheepCut [Esq-01] - 210.00 €' },
-          { material: 'Cuc-01', precio: 20.00, concat: 'Cuchillas de repuesto SheepCut 4T [Cuc-01] - 20.00 €' },
-          { material: 'Ide-01', precio: 25.00, concat: 'Identificadores de Oreja (Pack 100u) [Ide-01] - 25.00 €' },
-          { material: 'Ten-01', precio: 35.00, concat: 'Tenaza Aplicadora de Crotales [Ten-01] - 35.00 €' },
-          { material: 'PRI-000233', precio: 0.10, concat: 'PRI-000233 UNI TORNILLO PARA BISAGRA DE 1/2" Inventario en almacén 5980 - 0.10 €' },
-          { material: 'PRI-000148', precio: 0.03, concat: 'PRI-000148 PZA REMACHE POP 1/8X1/2 44523 Inventario en almacén 552 - 0.03 €' }
+          { material: 'Saco-01', TextoBreveDelMaterial: 'Saco de Alimento Premium Ovejas 25kg', precio: 45.00, concat: 'Saco de Alimento Premium Ovejas 25kg [Saco-01] - 45.00 €' },
+          { material: 'Sup-01', TextoBreveDelMaterial: 'Suplemento Vitamínico Ovino 5L', precio: 40.50, concat: 'Suplemento Vitamínico Ovino 5L [Sup-01] - 40.50 €' },
+          { material: 'Esq-01', TextoBreveDelMaterial: 'Esquiladora Profesional SheepCut', precio: 210.00, concat: 'Esquiladora Profesional SheepCut [Esq-01] - 210.00 €' },
+          { material: 'Cuc-01', TextoBreveDelMaterial: 'Cuchillas de repuesto SheepCut 4T', precio: 20.00, concat: 'Cuchillas de repuesto SheepCut 4T [Cuc-01] - 20.00 €' },
+          { material: 'Ide-01', TextoBreveDelMaterial: 'Identificadores de Oreja (Pack 100u)', precio: 25.00, concat: 'Identificadores de Oreja (Pack 100u) [Ide-01] - 25.00 €' },
+          { material: 'Ten-01', TextoBreveDelMaterial: 'Tenaza Aplicadora de Crotales', precio: 35.00, concat: 'Tenaza Aplicadora de Crotales [Ten-01] - 35.00 €' },
+          { material: 'PRI-000233', TextoBreveDelMaterial: 'UNI TORNILLO PARA BISAGRA DE 1/2"', precio: 0.10, concat: 'PRI-000233 UNI TORNILLO PARA BISAGRA DE 1/2" Inventario en almacén 5980 - 0.10 €' },
+          { material: 'PRI-000148', TextoBreveDelMaterial: 'PZA REMACHE POP 1/8X1/2 44523', precio: 0.03, concat: 'PRI-000148 PZA REMACHE POP 1/8X1/2 44523 Inventario en almacén 552 - 0.03 €' }
         ]);
       }
       if (lsGet(LS_KEYS.preventa).length === 0) {
@@ -812,7 +806,12 @@
       if (Array.isArray(stockAS) && stockAS.length > 0) {
         const stock = stockAS.map(s => {
           const n = {}; for (const k of Object.keys(s)) n[k.toLowerCase()] = s[k];
-          return { material: n.material || '', precio: parseFloat(n.precio) || 0, concat: n.concat || '' };
+          return {
+            material: n.material || '',
+            TextoBreveDelMaterial: s.TextoBreveDelMaterial || n.textobrevedelmaterial || '',
+            precio: parseFloat(s.Precio || n.precio) || 0,
+            concat: n.concat || ''
+          };
         }).filter(s => s.material && s.concat);
         if (stock.length > 0) lsSet(LS_KEYS.stock, stock);
       }
@@ -877,6 +876,13 @@
       
       // Sync initial AppSheet info
       updateAppSheetSyncTime();
+
+      // Close dropdowns on clicking outside
+      window.addEventListener('click', () => {
+        document.querySelectorAll('[id^="product-panel-"]').forEach(p => {
+          p.classList.add('hidden');
+        });
+      });
     });
 
     // Fetch clients and products for autocomplete lists (desde caché local)
@@ -911,20 +917,116 @@
       }
     }
 
-    function handleProductInput(rowIndex, value) {
-      const matched = productosGlobal.find(p => p.concat.toLowerCase().trim() === value.toLowerCase().trim());
+    function getProductName(material) {
+      if (!material) return '';
+      const matched = productosGlobal.find(p => p.material === material);
       if (matched) {
-        // Find the price input for this row and update it
-        const row = document.getElementById(`form-row-${rowIndex}`);
-        if (row) {
-          const priceInput = row.querySelector('input[type="number"][step="0.01"]');
-          if (priceInput) {
-            priceInput.value = matched.precio;
-            // Trigger state update
-            updateFormItem(rowIndex, 'precio_unitario', matched.precio);
-          }
+        return matched.TextoBreveDelMaterial || matched.concat || material;
+      }
+      return material;
+    }
+
+    function toggleProductDropdown(rowIndex, event) {
+      if (event) {
+        event.stopPropagation();
+      }
+      const panel = document.getElementById(`product-panel-${rowIndex}`);
+      if (!panel) return;
+
+      const isHidden = panel.classList.contains('hidden');
+
+      // Close all other dropdown panels
+      document.querySelectorAll('[id^="product-panel-"]').forEach(p => {
+        if (p.id !== `product-panel-${rowIndex}`) {
+          p.classList.add('hidden');
+        }
+      });
+
+      if (isHidden) {
+        panel.classList.remove('hidden');
+        const searchInput = document.getElementById(`product-search-${rowIndex}`);
+        if (searchInput) {
+          searchInput.value = '';
+          filterProductDropdown(rowIndex, '');
+          searchInput.focus();
+        }
+      } else {
+        panel.classList.add('hidden');
+      }
+    }
+
+    function filterProductDropdown(rowIndex, query) {
+      const listContainer = document.getElementById(`product-options-${rowIndex}`);
+      if (!listContainer) return;
+
+      const q = query.toLowerCase().trim();
+
+      const filtered = productosGlobal.filter(p => {
+        const mat = (p.material || '').toLowerCase();
+        const text = (p.TextoBreveDelMaterial || '').toLowerCase();
+        const concat = (p.concat || '').toLowerCase();
+        return mat.includes(q) || text.includes(q) || concat.includes(q);
+      });
+
+      listContainer.innerHTML = '';
+
+      if (filtered.length === 0) {
+        listContainer.innerHTML = '<div class="text-xs text-slate-500 py-2 px-3">No se encontraron productos</div>';
+        return;
+      }
+
+      filtered.forEach(p => {
+        const optionDiv = document.createElement('div');
+        optionDiv.className = "text-xs text-slate-200 hover:bg-emerald-600 hover:text-white py-1.5 px-3 rounded cursor-pointer transition-colors";
+        const displayName = p.TextoBreveDelMaterial || p.concat || p.material;
+        optionDiv.innerHTML = `
+          <div class="font-semibold truncate">${displayName}</div>
+          <div class="text-[10px] text-slate-400">ID: ${p.material} | Precio: ${p.precio.toFixed(2)} €</div>
+        `;
+        optionDiv.onclick = (e) => {
+          e.stopPropagation();
+          selectProduct(rowIndex, p.material);
+        };
+        listContainer.appendChild(optionDiv);
+      });
+    }
+
+    function selectProduct(rowIndex, material) {
+      const matched = productosGlobal.find(p => p.material === material);
+      if (!matched) return;
+
+      if (formItems[rowIndex]) {
+        formItems[rowIndex].producto = material;
+        formItems[rowIndex].precio_unitario = matched.precio;
+      }
+
+      const displayInput = document.getElementById(`product-display-${rowIndex}`);
+      if (displayInput) {
+        displayInput.value = matched.TextoBreveDelMaterial || matched.concat || material;
+      }
+
+      const row = document.getElementById(`form-row-${rowIndex}`);
+      if (row) {
+        const priceInput = row.querySelector('input[type="number"][step="0.01"]');
+        if (priceInput) {
+          priceInput.value = matched.precio;
+        }
+
+        const qtyInput = row.querySelector('input[type="number"][min="1"]');
+        const qty = qtyInput ? (parseInt(qtyInput.value) || 1) : 1;
+        const sub = (qty * matched.precio).toFixed(2);
+        const subEl = document.getElementById(`form-subtotal-${rowIndex}`);
+        if (subEl) {
+          subEl.textContent = `${sub} €`;
         }
       }
+
+      const panel = document.getElementById(`product-panel-${rowIndex}`);
+      if (panel) {
+        panel.classList.add('hidden');
+      }
+
+      calculateFormTotal();
     }
 
     // Fetch all preventas (intenta sincronizar con AppSheet, luego pinta desde caché local)
@@ -1048,8 +1150,24 @@
       tr.className = "hover:bg-slate-800/40 transition-colors";
 
       tr.innerHTML = `
-        <td class="py-2 px-4">
-          <input type="text" value="${producto}" list="productos-list" oninput="handleProductInput(${rowIndex}, this.value)" onchange="updateFormItem(${rowIndex}, 'producto', this.value)" required placeholder="Nombre del producto o servicio" class="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
+        <td class="py-2 px-4 relative">
+          <div class="relative" id="product-dropdown-container-${rowIndex}">
+            <div class="flex items-center bg-slate-900 border border-slate-700 rounded-lg overflow-hidden cursor-pointer" onclick="toggleProductDropdown(${rowIndex}, event)">
+              <input type="text" readonly id="product-display-${rowIndex}" placeholder="Seleccionar producto..." class="w-full bg-transparent px-3 py-1.5 text-xs text-white focus:outline-none cursor-pointer" required value="${getProductName(producto)}">
+              <div class="px-2 text-slate-400 flex items-center justify-center">
+                <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+              </div>
+            </div>
+
+            <div id="product-panel-${rowIndex}" class="hidden absolute left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 p-2 space-y-2 max-h-60 flex flex-col" onclick="event.stopPropagation()">
+              <div class="relative flex-shrink-0">
+                <input type="text" id="product-search-${rowIndex}" placeholder="Buscar producto..." oninput="filterProductDropdown(${rowIndex}, this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-emerald-500">
+              </div>
+              <div id="product-options-${rowIndex}" class="overflow-y-auto flex-1 space-y-0.5 max-h-40">
+                <!-- Filter options -->
+              </div>
+            </div>
+          </div>
         </td>
         <td class="py-2 px-3">
           <input type="number" value="${cantidad}" min="1" step="1" onchange="updateFormItem(${rowIndex}, 'cantidad', this.value)" required class="w-full text-center px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
@@ -1267,7 +1385,7 @@
 
           // Propagar a AppSheet (no bloqueante: si falla, el cambio ya quedó local)
           await callAppSheetAPI("Preventa", "Edit", [{
-            IDTransacion: id, IDcliente: cliente, FECHA: fecha,
+            IDTransacion: id, IDcliente: cliente, NombreDelCliente: cliente, FECHA: fecha,
             total: String(totalCalculado), Estado: estado || 'Pendiente', Notas: notas || ''
           }]).catch(err => console.error("AppSheet Edit Preventa falló:", err));
 
@@ -1276,17 +1394,37 @@
               .catch(err => console.error("AppSheet Delete detalles falló:", err));
           }
 
+          const nowPut = new Date();
+          const formattedDateTimePut = `${String(nowPut.getDate()).padStart(2, '0')}/${String(nowPut.getMonth()+1).padStart(2, '0')}/${nowPut.getFullYear()} ${String(nowPut.getHours()).padStart(2, '0')}:${String(nowPut.getMinutes()).padStart(2, '0')}:${String(nowPut.getSeconds()).padStart(2, '0')}`;
+
           const dRows = newDetalles.map(item => ({
-            IDDETALLE: item.id, IDTransaccion: id, ARTICULO: item.producto,
+            IDDETALLE: String(item.id), IDTransaccion: id, ARTICULO: item.producto,
             CANTIDAD: String(item.cantidad), PRECIO: String(item.precio_unitario),
-            'TOTAL LINEA': String(item.subtotal)
+            'TOTAL LINEA': String(item.subtotal),
+            FechaYHora: formattedDateTimePut,
+            pdf: `${item.id}.pdf`,
+            pdf_Bytes: "JVBERi0xLjQKJSAgIiB0ZXN0IGZpbGUgZm9yIGp1bGVz",
+            Cliente: cliente,
+            NombreDelCliente: cliente
           }));
           await callAppSheetAPI("DETALLE_PREVENTA", "Add", dRows).catch(err => console.error("AppSheet Add detalles falló:", err));
         } else {
-          // Crear
-          const datePrefix = new Date().toISOString().split('T')[0].substring(0, 7);
-          const randomSuffix = Math.random().toString(36).substring(2, 7).toUpperCase();
-          const newId = `PREV-${datePrefix}-${randomSuffix}`;
+          // Crear and respect the correlative structure "2026-01-M1P505-"
+          const prefix = "2026-01-M1P505-";
+          let maxNum = 0;
+          for (const p of preventasLocal) {
+            if (p.id && p.id.startsWith(prefix)) {
+              const suffix = p.id.substring(prefix.length);
+              const num = parseInt(suffix, 10);
+              if (!isNaN(num) && num > maxNum) {
+                maxNum = num;
+              }
+            }
+          }
+          if (maxNum === 0) {
+            maxNum = 331; // fallback default
+          }
+          const newId = prefix + (maxNum + 1);
 
           const newPreventa = { id: newId, cliente, telefono, fecha, total: totalCalculado, estado: estado || 'Pendiente', notas };
           const newDetalles = filteredDetails.map(item => ({
@@ -1302,14 +1440,22 @@
           lsSet(LS_KEYS.detalle, [...detallesLocal, ...newDetalles]);
 
           await callAppSheetAPI("Preventa", "Add", [{
-            IDTransacion: newId, IDcliente: cliente, FECHA: fecha,
+            IDTransacion: newId, IDcliente: cliente, NombreDelCliente: cliente, FECHA: fecha,
             total: String(totalCalculado), Estado: estado || 'Pendiente', Notas: notas || ''
           }]).catch(err => console.error("AppSheet Add Preventa falló:", err));
 
+          const nowAdd = new Date();
+          const formattedDateTimeAdd = `${String(nowAdd.getDate()).padStart(2, '0')}/${String(nowAdd.getMonth()+1).padStart(2, '0')}/${nowAdd.getFullYear()} ${String(nowAdd.getHours()).padStart(2, '0')}:${String(nowAdd.getMinutes()).padStart(2, '0')}:${String(nowAdd.getSeconds()).padStart(2, '0')}`;
+
           const dRows = newDetalles.map(item => ({
-            IDDETALLE: item.id, IDTransaccion: newId, ARTICULO: item.producto,
+            IDDETALLE: String(item.id), IDTransaccion: newId, ARTICULO: item.producto,
             CANTIDAD: String(item.cantidad), PRECIO: String(item.precio_unitario),
-            'TOTAL LINEA': String(item.subtotal)
+            'TOTAL LINEA': String(item.subtotal),
+            FechaYHora: formattedDateTimeAdd,
+            pdf: `${item.id}.pdf`,
+            pdf_Bytes: "JVBERi0xLjQKJSAgIiB0ZXN0IGZpbGUgZm9yIGp1bGVz",
+            Cliente: cliente,
+            NombreDelCliente: cliente
           }));
           await callAppSheetAPI("DETALLE_PREVENTA", "Add", dRows).catch(err => console.error("AppSheet Add detalles falló:", err));
         }
@@ -1409,11 +1555,14 @@
 
       if (p.detalles && p.detalles.length > 0) {
         p.detalles.forEach(d => {
+          const matchedProd = productosGlobal.find(pr => pr.material === d.producto);
+          console.log("JULES_DEBUG: d.producto =", d.producto, "matchedProd =", JSON.stringify(matchedProd));
+          const nameToDisplay = matchedProd && matchedProd.TextoBreveDelMaterial ? matchedProd.TextoBreveDelMaterial : d.producto;
           const div = document.createElement('div');
           div.className = "space-y-0.5";
           div.innerHTML = `
             <div class="flex justify-between">
-              <span class="font-bold truncate max-w-[170px]">${d.producto.toUpperCase()}</span>
+              <span class="font-bold truncate max-w-[170px]">${nameToDisplay.toUpperCase()}</span>
               <span>${d.subtotal.toFixed(2)} €</span>
             </div>
             <div class="text-[8px] text-slate-500 pl-2">
@@ -1424,12 +1573,6 @@
         });
       }
 
-      // Calculate taxes for thermal style
-      const subtotalBase = p.total / 1.21;
-      const iva = p.total - subtotalBase;
-
-      document.getElementById('ticket-subtotal').textContent = `${subtotalBase.toFixed(2)} €`;
-      document.getElementById('ticket-iva').textContent = `${iva.toFixed(2)} €`;
       document.getElementById('ticket-total').textContent = `${p.total.toFixed(2)} €`;
 
       // Save ID on print button
@@ -1474,18 +1617,16 @@
       if (!p) return;
 
       const canvas = document.getElementById('print-ticket-area');
-      
-      // Calculate taxes
-      const subtotalBase = p.total / 1.21;
-      const iva = p.total - subtotalBase;
 
       // Populate items
       let itemsHtml = '';
       p.detalles.forEach(d => {
+        const matchedProd = productosGlobal.find(pr => pr.material === d.producto);
+        const nameToDisplay = matchedProd && matchedProd.TextoBreveDelMaterial ? matchedProd.TextoBreveDelMaterial : d.producto;
         itemsHtml += `
           <div style="margin-bottom: 5px;">
             <div style="display: flex; justify-content: space-between;">
-              <span style="font-weight: bold; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${d.producto.toUpperCase()}</span>
+              <span style="font-weight: bold; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${nameToDisplay.toUpperCase()}</span>
               <span>${d.subtotal.toFixed(2)} €</span>
             </div>
             <div style="font-size: 10px; color: #555; padding-left: 10px;">
@@ -1497,6 +1638,7 @@
 
       canvas.innerHTML = `
         <div style="text-align: center; margin-bottom: 15px;">
+          <img src="Logoferre.png" alt="Logo" style="margin: 0 auto 10px auto; display: block; height: 50px; max-height: 50px; object-fit: contain;">
           <h4 style="font-size: 16px; font-weight: 900; letter-spacing: 2px; margin: 0 0 5px 0;">*** APP SHEEP ***</h4>
           <p style="font-size: 10px; color: #444; margin: 0 0 3px 0;">SISTEMA INTEGRADO APPSHEET</p>
           <p style="font-size: 9px; color: #666; margin: 0;">Calle Ganadería S/N, Badajoz</p>
@@ -1523,14 +1665,6 @@
         <p style="letter-spacing: -1px; margin: 8px 0; color: #666; font-size: 12px;">------------------------------------</p>
 
         <div style="font-size: 11px; text-align: right; line-height: 1.4;">
-          <div style="display: flex; justify-content: space-between; color: #555; font-size: 10px;">
-            <span>S. Total (Base Imp.):</span>
-            <span>${subtotalBase.toFixed(2)} €</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; color: #555; font-size: 10px; margin-bottom: 4px;">
-            <span>I.V.A. (21% Incl.):</span>
-            <span>${iva.toFixed(2)} €</span>
-          </div>
           <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 900; border-top: 1px dashed #333; padding-top: 6px;">
             <span>TOTAL:</span>
             <span>${p.total.toFixed(2)} €</span>

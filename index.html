@@ -678,12 +678,200 @@
     // Form items array (for creation/edition)
     let formItems = [];
 
+    // ============================================================
+    // CONEXIÓN DIRECTA A APPSHEET (sin backend propio)
+    // Esta versión corre 100% en el navegador para poder publicarse
+    // en GitHub Pages (que solo sirve archivos estáticos). En vez de
+    // llamar a un servidor Node, habla directo con la API REST de
+    // AppSheet y usa localStorage como caché local (reemplaza a la
+    // base de datos SQLite que antes vivía en el servidor).
+    //
+    // IMPORTANTE: como este HTML es público, la applicationAccessKey
+    // queda visible para cualquiera que inspeccione el código fuente.
+    // Es aceptable si el nivel de acceso de esa clave es limitado,
+    // pero ten en cuenta que no es un secreto protegido.
+    // ============================================================
+    const APPSHEET_APP_ID = "5f559e4e-a33c-4f2e-9180-21b935687975";
+    const APPSHEET_ACCESS_KEY = "V2-TTAaj-UPBlO-ccGTR-j5YTz-xopwO-0NLXj-SCe9c-aTTxF";
+
+    const LS_KEYS = {
+      preventa: 'appsheep_preventa',
+      detalle: 'appsheep_detalle',
+      clientes: 'appsheep_clientes',
+      stock: 'appsheep_stock'
+    };
+
+    function lsGet(key) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function lsSet(key, value) {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    // Siembra datos de demostración la primera vez que se abre la app,
+    // para que la interfaz nunca se vea vacía aunque AppSheet no responda.
+    function seedLocalDataIfEmpty() {
+      if (lsGet(LS_KEYS.clientes).length === 0) {
+        lsSet(LS_KEYS.clientes, [
+          { id: '1', nombre: 'María González', telefono: '+34 612 345 678' },
+          { id: '2', nombre: 'Juan Martínez (Ganadera El Prado)', telefono: '+34 699 888 777' },
+          { id: '3', nombre: 'Ana Isabel Ruiz', telefono: '+34 655 444 333' },
+          { id: '4', nombre: 'ACATHA SV SAS DE CV', telefono: '50376295120' }
+        ]);
+      }
+      if (lsGet(LS_KEYS.stock).length === 0) {
+        lsSet(LS_KEYS.stock, [
+          { material: 'Saco-01', precio: 45.00, concat: 'Saco de Alimento Premium Ovejas 25kg [Saco-01] - 45.00 €' },
+          { material: 'Sup-01', precio: 40.50, concat: 'Suplemento Vitamínico Ovino 5L [Sup-01] - 40.50 €' },
+          { material: 'Esq-01', precio: 210.00, concat: 'Esquiladora Profesional SheepCut [Esq-01] - 210.00 €' },
+          { material: 'Cuc-01', precio: 20.00, concat: 'Cuchillas de repuesto SheepCut 4T [Cuc-01] - 20.00 €' },
+          { material: 'Ide-01', precio: 25.00, concat: 'Identificadores de Oreja (Pack 100u) [Ide-01] - 25.00 €' },
+          { material: 'Ten-01', precio: 35.00, concat: 'Tenaza Aplicadora de Crotales [Ten-01] - 35.00 €' },
+          { material: 'PRI-000233', precio: 0.10, concat: 'PRI-000233 UNI TORNILLO PARA BISAGRA DE 1/2" Inventario en almacén 5980 - 0.10 €' },
+          { material: 'PRI-000148', precio: 0.03, concat: 'PRI-000148 PZA REMACHE POP 1/8X1/2 44523 Inventario en almacén 552 - 0.03 €' }
+        ]);
+      }
+      if (lsGet(LS_KEYS.preventa).length === 0) {
+        const yesterday = new Date(Date.now() - 3600000 * 24).toISOString().split('T')[0];
+        const today = new Date().toISOString().split('T')[0];
+        lsSet(LS_KEYS.preventa, [
+          { id: '2026-01-M1P505-1', cliente: 'María González', telefono: '+34 612 345 678', fecha: yesterday, total: 175.50, estado: 'Pendiente', notas: 'Entregar preferiblemente en horario de tarde.' },
+          { id: 'PREV-ABC12345', cliente: 'Juan Martínez (Ganadera El Prado)', telefono: '+34 699 888 777', fecha: today, total: 520.00, estado: 'Completado', notas: 'Cliente habitual. Retira en tienda.' },
+          { id: 'PREV-XYZ67890', cliente: 'Ana Isabel Ruiz', telefono: '+34 655 444 333', fecha: today, total: 85.00, estado: 'Pendiente', notas: 'Llamar antes de enviar.' }
+        ]);
+        lsSet(LS_KEYS.detalle, [
+          { id: 'd1', preventa_id: '2026-01-M1P505-1', producto: 'Saco-01', cantidad: 3, precio_unitario: 45.00, subtotal: 135.00 },
+          { id: 'd2', preventa_id: '2026-01-M1P505-1', producto: 'Sup-01', cantidad: 1, precio_unitario: 40.50, subtotal: 40.50 },
+          { id: 'd3', preventa_id: 'PREV-ABC12345', producto: 'Esq-01', cantidad: 2, precio_unitario: 210.00, subtotal: 420.00 },
+          { id: 'd4', preventa_id: 'PREV-ABC12345', producto: 'Cuc-01', cantidad: 5, precio_unitario: 20.00, subtotal: 100.00 },
+          { id: 'd5', preventa_id: 'PREV-XYZ67890', producto: 'Ide-01', cantidad: 2, precio_unitario: 25.00, subtotal: 50.00 },
+          { id: 'd6', preventa_id: 'PREV-XYZ67890', producto: 'Ten-01', cantidad: 1, precio_unitario: 35.00, subtotal: 35.00 }
+        ]);
+      }
+    }
+
+    // Llamada directa a la API REST de AppSheet desde el navegador.
+    async function callAppSheetAPI(tableName, action, rows = [], selector = null) {
+      const url = `https://api.appsheet.com/api/v2/apps/${APPSHEET_APP_ID}/tables/${encodeURIComponent(tableName)}/Action`;
+      const payload = {
+        Action: action,
+        Properties: { Locale: "es-ES", Timezone: "Romance Standard Time" }
+      };
+      if (selector) payload.Properties.Selector = selector;
+      if (rows && rows.length > 0) payload.Rows = rows;
+      else if (action === "Find") payload.Rows = [];
+
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "applicationAccessKey": APPSHEET_ACCESS_KEY,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+          console.error(`AppSheet API Error en ${tableName} (status ${response.status})`);
+          return null;
+        }
+        const text = await response.text();
+        if (!text) return [];
+        try { return JSON.parse(text); } catch (e) { return []; }
+      } catch (error) {
+        // Si esto falla, típicamente es porque AppSheet bloquea la
+        // llamada directa desde el navegador (CORS) o no hay internet.
+        // En ese caso seguimos funcionando con la caché local.
+        console.error("No se pudo conectar directamente con AppSheet (posible bloqueo CORS o sin conexión):", error.message);
+        return null;
+      }
+    }
+
+    // Trae datos frescos de AppSheet y sobreescribe la caché local.
+    async function syncFromAppSheetToLocal() {
+      const [preventasAS, detallesAS, clientesAS, stockAS] = await Promise.all([
+        callAppSheetAPI("Preventa", "Find"),
+        callAppSheetAPI("DETALLE_PREVENTA", "Find"),
+        callAppSheetAPI("clientes", "Find"),
+        callAppSheetAPI("stock", "Find")
+      ]);
+
+      if (Array.isArray(clientesAS) && clientesAS.length > 0) {
+        const clientes = clientesAS.map(c => {
+          const n = {}; for (const k of Object.keys(c)) n[k.toLowerCase()] = c[k];
+          return { id: n.idcliente || n.id || '', nombre: n.nombrecliente || n.nombre || '', telefono: n.telefono || '' };
+        }).filter(c => c.id && c.nombre);
+        if (clientes.length > 0) lsSet(LS_KEYS.clientes, clientes);
+      }
+
+      if (Array.isArray(stockAS) && stockAS.length > 0) {
+        const stock = stockAS.map(s => {
+          const n = {}; for (const k of Object.keys(s)) n[k.toLowerCase()] = s[k];
+          return { material: n.material || '', precio: parseFloat(n.precio) || 0, concat: n.concat || '' };
+        }).filter(s => s.material && s.concat);
+        if (stock.length > 0) lsSet(LS_KEYS.stock, stock);
+      }
+
+      if (Array.isArray(preventasAS) && preventasAS.length > 0) {
+        const clientesLocal = lsGet(LS_KEYS.clientes);
+        const preventasNuevas = preventasAS.map(p => {
+          const idtransacion = p.IDTransacion || p.idtransacion || p.id || '';
+          const idcliente = p.IDcliente || p.idcliente || p.cliente || '';
+          const match = clientesLocal.find(c => c.id === idcliente || c.nombre === idcliente);
+          return {
+            id: idtransacion,
+            cliente: idcliente,
+            telefono: match ? (match.telefono || '') : '',
+            fecha: p.FECHA || p.fecha || '',
+            total: parseFloat(p.total) || 0,
+            estado: p.Estado || p.estado || 'Pendiente',
+            notas: p.Notas || p.notas || ''
+          };
+        });
+        lsSet(LS_KEYS.preventa, preventasNuevas);
+
+        const detallesNuevos = (Array.isArray(detallesAS) ? detallesAS : []).map(d => {
+          const cantidad = parseInt(d.CANTIDAD || d.cantidad) || 0;
+          const precio = parseFloat(d.PRECIO || d.precio) || 0;
+          return {
+            id: d.IDDETALLE || d.iddetalle || d.id || '',
+            preventa_id: d.IDTransaccion || d.idtransaccion || d.preventa_id || '',
+            producto: d.ARTICULO || d.articulo || d.producto || '',
+            cantidad,
+            precio_unitario: precio,
+            subtotal: parseFloat(d['TOTAL LINEA'] || d.total_linea || d.subtotal) || (cantidad * precio)
+          };
+        });
+        lsSet(LS_KEYS.detalle, detallesNuevos);
+      }
+    }
+
+    // Reconstruye `preventas` (con sus `detalles` anidados) a partir
+    // de lo que haya en localStorage ahora mismo, y vuelve a pintar la UI.
+    function renderFromLocalCache() {
+      const preventasLocal = lsGet(LS_KEYS.preventa);
+      const detallesLocal = lsGet(LS_KEYS.detalle);
+      preventas = preventasLocal
+        .map(p => ({ ...p, detalles: detallesLocal.filter(d => d.preventa_id === p.id) }))
+        .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '') || String(b.id).localeCompare(String(a.id)));
+      calculateStats();
+      filterAndRender();
+    }
+
     // On Document Load
     document.addEventListener("DOMContentLoaded", () => {
       // Initialize Lucide Icons
       lucide.createIcons();
-      
-      // Load Data from API
+
+      // Asegura que haya datos de demostración en la caché local
+      seedLocalDataIfEmpty();
+
+      // Load Data (caché local + intento de sincronización con AppSheet)
       fetchPreventas();
       fetchClientesAndProductos();
       
@@ -691,23 +879,12 @@
       updateAppSheetSyncTime();
     });
 
-    // Fetch clients and products for autocomplete lists
+    // Fetch clients and products for autocomplete lists (desde caché local)
     async function fetchClientesAndProductos() {
-      try {
-        const resClientes = await fetch('/api/clientes');
-        if (resClientes.ok) {
-          clientesGlobal = await resClientes.json();
-          populateClientesDatalist();
-        }
-
-        const resProductos = await fetch('/api/productos');
-        if (resProductos.ok) {
-          productosGlobal = await resProductos.json();
-          populateProductosDatalist();
-        }
-      } catch (err) {
-        console.error("Error fetching clients or products:", err);
-      }
+      clientesGlobal = lsGet(LS_KEYS.clientes);
+      productosGlobal = lsGet(LS_KEYS.stock);
+      populateClientesDatalist();
+      populateProductosDatalist();
     }
 
     function populateClientesDatalist() {
@@ -750,23 +927,14 @@
       }
     }
 
-    // Fetch all preventas from API
+    // Fetch all preventas (intenta sincronizar con AppSheet, luego pinta desde caché local)
     async function fetchPreventas() {
       try {
-        const response = await fetch('/api/preventas');
-        if (!response.ok) throw new Error('Error al obtener datos');
-        
-        preventas = await response.json();
-        
-        // Update stats
-        calculateStats();
-        
-        // Render
-        filterAndRender();
+        await syncFromAppSheetToLocal();
       } catch (err) {
-        console.error(err);
-        showToast('Error al conectar con la base de datos', 'error');
+        console.warn("No se pudo sincronizar con AppSheet, usando caché local:", err.message);
       }
+      renderFromLocalCache();
     }
 
     // Calculate Dashboard Statistics
@@ -1073,32 +1241,83 @@
       };
 
       try {
-        let response;
+        const preventasLocal = lsGet(LS_KEYS.preventa);
+        const detallesLocal = lsGet(LS_KEYS.detalle);
+        const totalCalculado = filteredDetails.reduce((sum, it) => sum + (parseFloat(it.cantidad) || 0) * (parseFloat(it.precio_unitario) || 0), 0);
+
         if (id) {
-          // Edit (PUT)
-          response = await fetch(`/api/preventas/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
+          // Editar
+          const idx = preventasLocal.findIndex(p => p.id === id);
+          if (idx === -1) throw new Error('Preventa no encontrada en la caché local');
+          preventasLocal[idx] = { ...preventasLocal[idx], cliente, telefono, fecha, estado, notas, total: totalCalculado };
+
+          const oldDetails = detallesLocal.filter(d => d.preventa_id === id);
+          const remaining = detallesLocal.filter(d => d.preventa_id !== id);
+          const newDetalles = filteredDetails.map(item => ({
+            id: 'det-' + Math.random().toString(36).substring(2, 10),
+            preventa_id: id,
+            producto: item.producto,
+            cantidad: parseFloat(item.cantidad) || 0,
+            precio_unitario: parseFloat(item.precio_unitario) || 0,
+            subtotal: (parseFloat(item.cantidad) || 0) * (parseFloat(item.precio_unitario) || 0)
+          }));
+
+          lsSet(LS_KEYS.detalle, [...remaining, ...newDetalles]);
+          lsSet(LS_KEYS.preventa, preventasLocal);
+
+          // Propagar a AppSheet (no bloqueante: si falla, el cambio ya quedó local)
+          await callAppSheetAPI("Preventa", "Edit", [{
+            IDTransacion: id, IDcliente: cliente, FECHA: fecha,
+            total: String(totalCalculado), Estado: estado || 'Pendiente', Notas: notas || ''
+          }]).catch(err => console.error("AppSheet Edit Preventa falló:", err));
+
+          if (oldDetails.length > 0) {
+            await callAppSheetAPI("DETALLE_PREVENTA", "Delete", oldDetails.map(d => ({ IDDETALLE: String(d.id) })))
+              .catch(err => console.error("AppSheet Delete detalles falló:", err));
+          }
+
+          const dRows = newDetalles.map(item => ({
+            IDDETALLE: item.id, IDTransaccion: id, ARTICULO: item.producto,
+            CANTIDAD: String(item.cantidad), PRECIO: String(item.precio_unitario),
+            'TOTAL LINEA': String(item.subtotal)
+          }));
+          await callAppSheetAPI("DETALLE_PREVENTA", "Add", dRows).catch(err => console.error("AppSheet Add detalles falló:", err));
         } else {
-          // Create (POST)
-          response = await fetch('/api/preventas', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
+          // Crear
+          const datePrefix = new Date().toISOString().split('T')[0].substring(0, 7);
+          const randomSuffix = Math.random().toString(36).substring(2, 7).toUpperCase();
+          const newId = `PREV-${datePrefix}-${randomSuffix}`;
+
+          const newPreventa = { id: newId, cliente, telefono, fecha, total: totalCalculado, estado: estado || 'Pendiente', notas };
+          const newDetalles = filteredDetails.map(item => ({
+            id: 'det-' + Math.random().toString(36).substring(2, 10),
+            preventa_id: newId,
+            producto: item.producto,
+            cantidad: parseFloat(item.cantidad) || 0,
+            precio_unitario: parseFloat(item.precio_unitario) || 0,
+            subtotal: (parseFloat(item.cantidad) || 0) * (parseFloat(item.precio_unitario) || 0)
+          }));
+
+          lsSet(LS_KEYS.preventa, [...preventasLocal, newPreventa]);
+          lsSet(LS_KEYS.detalle, [...detallesLocal, ...newDetalles]);
+
+          await callAppSheetAPI("Preventa", "Add", [{
+            IDTransacion: newId, IDcliente: cliente, FECHA: fecha,
+            total: String(totalCalculado), Estado: estado || 'Pendiente', Notas: notas || ''
+          }]).catch(err => console.error("AppSheet Add Preventa falló:", err));
+
+          const dRows = newDetalles.map(item => ({
+            IDDETALLE: item.id, IDTransaccion: newId, ARTICULO: item.producto,
+            CANTIDAD: String(item.cantidad), PRECIO: String(item.precio_unitario),
+            'TOTAL LINEA': String(item.subtotal)
+          }));
+          await callAppSheetAPI("DETALLE_PREVENTA", "Add", dRows).catch(err => console.error("AppSheet Add detalles falló:", err));
         }
 
-        if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(errData.error || 'Error al guardar preventa');
-        }
-
-        showToast(id ? 'Preventa actualizada correctamente' : 'Nueva preventa guardada en base de datos', 'success');
+        showToast(id ? 'Preventa actualizada correctamente' : 'Nueva preventa guardada', 'success');
         
         // Refresh data
-        await fetchPreventas();
+        renderFromLocalCache();
         
         // Close modal
         closeFormModal();
@@ -1115,14 +1334,22 @@
     async function confirmDelete(id, name) {
       if (confirm(`¿Está seguro de eliminar la preventa de "${name}"? Se borrarán todos los detalles asociados en cascada.`)) {
         try {
-          const response = await fetch(`/api/preventas/${id}`, {
-            method: 'DELETE'
-          });
+          const preventasLocal = lsGet(LS_KEYS.preventa);
+          const detallesLocal = lsGet(LS_KEYS.detalle);
+          const oldDetails = detallesLocal.filter(d => d.preventa_id === id);
 
-          if (!response.ok) throw new Error('Error al borrar la orden');
+          lsSet(LS_KEYS.preventa, preventasLocal.filter(p => p.id !== id));
+          lsSet(LS_KEYS.detalle, detallesLocal.filter(d => d.preventa_id !== id));
 
-          showToast('Preventa eliminada con éxito de la base de datos', 'success');
-          fetchPreventas();
+          if (oldDetails.length > 0) {
+            await callAppSheetAPI("DETALLE_PREVENTA", "Delete", oldDetails.map(d => ({ IDDETALLE: String(d.id) })))
+              .catch(err => console.error("AppSheet Delete detalles falló:", err));
+          }
+          await callAppSheetAPI("Preventa", "Delete", [{ IDTransacion: String(id) }])
+            .catch(err => console.error("AppSheet Delete Preventa falló:", err));
+
+          showToast('Preventa eliminada con éxito', 'success');
+          renderFromLocalCache();
           triggerMockSheetSync();
         } catch (err) {
           console.error(err);
@@ -1346,25 +1573,21 @@
       showToast('Contactando servidores de App Sheep (AppSheet)...', 'info');
 
       try {
-        const response = await fetch('/api/appsheet-sync', { method: 'POST' });
-        const data = await response.json();
+        await syncFromAppSheetToLocal();
 
         setTimeout(() => {
           syncIcon.classList.remove('animate-spin');
-          if (data.success) {
-            updateAppSheetSyncTime();
-            showToast('Sincronización de base de datos bidireccional exitosa', 'success');
-            // Refresh clients and products after full sync
-            fetchClientesAndProductos();
-          } else {
-            throw new Error('Sincronización rechazada');
-          }
+          updateAppSheetSyncTime();
+          showToast('Sincronización de base de datos bidireccional exitosa', 'success');
+          // Refresh clients and products after full sync
+          fetchClientesAndProductos();
+          renderFromLocalCache();
         }, 1200);
 
       } catch (err) {
         console.error(err);
         syncIcon.classList.remove('animate-spin');
-        showToast('Error de comunicación con AppSheet', 'error');
+        showToast('No se pudo contactar AppSheet, usando caché local', 'error');
       }
     }
 

@@ -101,19 +101,13 @@
           
           <!-- Logo & Brand -->
           <div class="flex items-center gap-3">
-            <div class="bg-gradient-to-tr from-emerald-500 to-green-600 p-2.5 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center">
-              <!-- Custom Sheep SVG -->
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 2a5 5 0 0 0-4.9 4c-.3 0-.6 0-.9.1A4 4 0 0 0 4 10c0 .4 0 .7.1 1.1A4.5 4.5 0 0 0 5 20h14a4.5 4.5 0 0 0 .9-8.9c.1-.4.1-.7.1-1.1a4 4 0 0 0-2.2-3.9c-.3-.1-.6-.1-.9-.1A5 5 0 0 0 12 2z"/>
-                <path d="M10 13v2"/>
-                <path d="M14 13v2"/>
-                <path d="M8 11.5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
-                <path d="M16 11.5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
-              </svg>
+            <div class="bg-slate-800 p-1.5 rounded-xl border border-slate-700 flex items-center justify-center">
+              <!-- Render Logoferre.png at the top of the web page -->
+              <img src="Logoferre.png" alt="Logo" class="w-10 h-10 object-contain">
             </div>
             <div>
               <div class="flex items-center gap-2">
-                <span class="text-xl font-bold tracking-tight text-white">APP SHEEP</span>
+                <span class="text-xl font-bold tracking-tight text-white">FERRETERÍA APP SHEEP</span>
                 <span class="bg-emerald-500/10 text-emerald-400 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-emerald-500/20 flex items-center gap-1">
                   <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
                   AppSheet Link
@@ -236,7 +230,15 @@
               <i data-lucide="chevron-down" class="absolute right-3 top-3 h-4 w-4 text-slate-400 pointer-events-none"></i>
             </div>
 
-            <!-- Add Pre-sale Button -->
+            <!-- Action Buttons -->
+            <button onclick="openClientCreateModal()" class="flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 px-3 py-2 rounded-xl text-xs font-semibold shadow-md transition-all">
+              <i data-lucide="user-plus" class="w-3.5 h-3.5 text-emerald-400"></i>
+              Nuevo Cliente
+            </button>
+            <button onclick="openProductCreateModal()" class="flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 px-3 py-2 rounded-xl text-xs font-semibold shadow-md transition-all">
+              <i data-lucide="package-plus" class="w-3.5 h-3.5 text-emerald-400"></i>
+              Nuevo Producto
+            </button>
             <button onclick="openCreateModal()" class="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-lg shadow-emerald-600/10 hover:shadow-emerald-500/20 transition-all">
               <i data-lucide="plus" class="w-4 h-4"></i>
               Nueva Preventa
@@ -344,7 +346,7 @@
     <div class="absolute inset-0 bg-slate-950/70 backdrop-blur-sm modal-backdrop" onclick="closeFormModal()"></div>
     
     <!-- Modal Content Card -->
-    <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col relative z-10 transition-all scale-95 opacity-0 duration-200" id="form-modal-card">
+    <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col relative z-10 transition-all scale-95 opacity-0 duration-200" id="form-modal-card">
       
       <!-- Header -->
       <div class="p-5 border-b border-slate-700 bg-slate-800/80 flex items-center justify-between">
@@ -362,106 +364,192 @@
         </button>
       </div>
 
-      <!-- Scrollable Form Body -->
-      <form id="preventa-form" onsubmit="handleFormSubmit(event)" class="overflow-y-auto flex-1 p-6 space-y-6">
+      <!-- Scrollable Form Body with Split Layout (Form + Real-time Ticket Preview) -->
+      <div class="overflow-y-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6">
         
-        <input type="hidden" id="form-id">
-
-        <!-- Cabecera Fields -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <!-- Left Side: Form Fields (7/12) -->
+        <form id="preventa-form" onsubmit="handleFormSubmit(event)" class="lg:col-span-7 space-y-6">
           
-          <div>
-            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Nombre del Cliente *</label>
-            <input type="text" id="form-cliente" list="clientes-list" oninput="handleClientInput(this.value)" required placeholder="Ej. María González" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
-          </div>
+          <input type="hidden" id="form-id">
 
-          <div>
-            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Teléfono de Contacto</label>
-            <input type="text" id="form-telefono" placeholder="Ej. +34 600 000 000" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
-          </div>
+          <!-- Cabecera Fields -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 
-          <div>
-            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Fecha de la Orden *</label>
-            <input type="date" id="form-fecha" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Estado de Pago / Despacho</label>
-            <div class="relative">
-              <select id="form-estado" class="w-full pl-3.5 pr-10 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all appearance-none cursor-pointer">
-                <option value="Pendiente">Pendiente</option>
-                <option value="Completado">Completado</option>
-              </select>
-              <i data-lucide="chevron-down" class="absolute right-3.5 top-3.5 h-4 w-4 text-slate-400 pointer-events-none"></i>
+            <div class="relative" id="client-dropdown-container">
+              <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Nombre del Cliente *</label>
+              <input type="text" id="form-cliente" autocomplete="off" onfocus="showClientDropdown()" oninput="filterClientDropdown(this.value)" required placeholder="Ej. María González" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+              <div id="client-dropdown-panel" class="hidden absolute left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 p-2 max-h-60 overflow-y-auto space-y-1">
+                <!-- Dynamically populated options -->
+              </div>
             </div>
-          </div>
 
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Notas u Observaciones adicionales</label>
-          <textarea id="form-notas" rows="2" placeholder="Indicaciones para el transportista o referencias..." class="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"></textarea>
-        </div>
-
-        <div class="h-px bg-slate-700"></div>
-
-        <!-- Detalle de Preventa Section -->
-        <div>
-          <div class="flex items-center justify-between mb-4">
             <div>
-              <h4 class="text-sm font-bold text-white">Detalle de la Preventa (Artículos)</h4>
-              <p class="text-xs text-slate-400">Añada los productos pedidos y sus respectivos precios.</p>
+              <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Teléfono de Contacto</label>
+              <input type="text" id="form-telefono" oninput="updateFormTicketPreview()" placeholder="Ej. +34 600 000 000" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
             </div>
-            <button type="button" onclick="addDetailRow()" class="flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 hover:border-slate-500 text-slate-200 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-all">
-              <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
-              Añadir Artículo
-            </button>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Fecha de la Orden *</label>
+              <input type="date" id="form-fecha" oninput="updateFormTicketPreview()" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Estado de Pago / Despacho</label>
+              <div class="relative">
+                <select id="form-estado" class="w-full pl-3.5 pr-10 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all appearance-none cursor-pointer">
+                  <option value="Pendiente">Pendiente</option>
+                  <option value="Completado">Completado</option>
+                </select>
+                <i data-lucide="chevron-down" class="absolute right-3.5 top-3.5 h-4 w-4 text-slate-400 pointer-events-none"></i>
+              </div>
+            </div>
+
           </div>
 
-          <!-- Dynamic Items Table -->
-          <div class="border border-slate-700 rounded-xl overflow-hidden bg-slate-900/30">
-            <table class="w-full text-left">
-              <thead>
-                <tr class="bg-slate-900 border-b border-slate-700 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
-                  <th class="py-2 px-4 w-1/2">Producto *</th>
-                  <th class="py-2 px-3 text-center w-20">Cant. *</th>
-                  <th class="py-2 px-3 text-right w-28">P. Unitario *</th>
-                  <th class="py-2 px-4 text-right w-28">Subtotal</th>
-                  <th class="py-2 px-2 text-center w-10"></th>
-                </tr>
-              </thead>
-              <tbody id="form-items-body" class="divide-y divide-slate-700/40">
-                <!-- Appended rows -->
-              </tbody>
-            </table>
-            
-            <div id="form-items-empty" class="hidden py-8 text-center text-xs text-slate-500">
-              No hay productos agregados a esta preventa. Presione "Añadir Artículo" para agregar uno.
-            </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Notas u Observaciones adicionales</label>
+            <textarea id="form-notas" rows="2" placeholder="Indicaciones para el transportista o referencias..." class="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"></textarea>
           </div>
 
-          <!-- Total Calculation Banner -->
-          <div class="flex justify-end mt-4">
-            <div class="bg-slate-900 px-6 py-3 rounded-xl border border-slate-700 flex items-center gap-4">
-              <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total de la Orden:</span>
-              <span class="text-xl font-black text-emerald-400" id="form-grand-total">0.00 €</span>
+          <div class="h-px bg-slate-700"></div>
+
+          <!-- Detalle de Preventa Section -->
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h4 class="text-sm font-bold text-white">Detalle de la Preventa (Artículos)</h4>
+                <p class="text-xs text-slate-400">Añada los productos pedidos y sus respectivos precios.</p>
+              </div>
+              <button type="button" onclick="addDetailRow()" class="flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 hover:border-slate-500 text-slate-200 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-all">
+                <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
+                Añadir Artículo
+              </button>
             </div>
+
+            <!-- Dynamic Items Table -->
+            <div class="border border-slate-700 rounded-xl overflow-hidden bg-slate-900/30">
+              <table class="w-full text-left">
+                <thead>
+                  <tr class="bg-slate-900 border-b border-slate-700 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                    <th class="py-2 px-4 w-1/2">Producto *</th>
+                    <th class="py-2 px-3 text-center w-20">Cant. *</th>
+                    <th class="py-2 px-3 text-right w-28">P. Unitario *</th>
+                    <th class="py-2 px-4 text-right w-28">Subtotal</th>
+                    <th class="py-2 px-2 text-center w-10"></th>
+                  </tr>
+                </thead>
+                <tbody id="form-items-body" class="divide-y divide-slate-700/40">
+                  <!-- Appended rows -->
+                </tbody>
+              </table>
+
+              <div id="form-items-empty" class="hidden py-8 text-center text-xs text-slate-500">
+                No hay productos agregados a esta preventa. Presione "Añadir Artículo" para agregar uno.
+              </div>
+            </div>
+
+            <!-- Total Calculation Banner -->
+            <div class="flex justify-end mt-4">
+              <div class="bg-slate-900 px-6 py-3 rounded-xl border border-slate-700 flex items-center gap-4">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total de la Orden:</span>
+                <span class="text-xl font-black text-emerald-400" id="form-grand-total">0.00 €</span>
+              </div>
+            </div>
+
           </div>
 
+          <!-- Save/Submit Inside Form (Invisible but keeps standard form submit on Enter key) -->
+          <button type="submit" id="hidden-form-submit" class="hidden"></button>
+
+        </form>
+
+        <!-- Right Side: Real-time Ticket Preview (5/12) -->
+        <div class="lg:col-span-5 bg-slate-900 p-4 rounded-xl border border-slate-700 flex flex-col items-center">
+          <div class="w-full flex items-center justify-between mb-3 text-xs">
+            <span class="font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1">
+              <i data-lucide="eye" class="w-3.5 h-3.5 text-emerald-400"></i>
+              Previsualización de Ticket (80mm)
+            </span>
+            <span class="bg-slate-800 text-slate-400 px-2 py-0.5 rounded text-[10px]">En Tiempo Real</span>
+          </div>
+
+          <!-- Digital receipt container -->
+          <div class="bg-white text-slate-900 p-5 rounded shadow-inner w-full max-w-[280px] font-mono text-xs border border-slate-300 leading-tight select-none pointer-events-none" id="form-digital-receipt">
+            <div class="text-center space-y-1 mb-4">
+              <img src="Logoferre.png" alt="Logo" class="mx-auto h-12 object-contain mb-2">
+              <h4 class="font-black text-sm tracking-widest uppercase">*** APP SHEEP ***</h4>
+              <p class="text-[10px] text-slate-600">SISTEMA INTEGRADO APPSHEET</p>
+              <p class="text-[9px] text-slate-500">Calle Ganadería S/N, Badajoz</p>
+              <p class="text-[9px] text-slate-500">Telf: +34 900 123 456</p>
+            </div>
+
+            <div class="space-y-1 text-[10px] mb-3">
+              <p><strong>FECHA:</strong> <span id="form-ticket-fecha">YYYY-MM-DD</span></p>
+              <p><strong>TICKET:</strong> #00000<span id="form-ticket-id">0</span></p>
+              <p><strong>CLIENTE:</strong> <span id="form-ticket-cliente">CLIENTE</span></p>
+              <p><strong>TELF:</strong> <span id="form-ticket-telefono">TELF</span></p>
+            </div>
+
+            <p class="text-slate-400 overflow-hidden whitespace-nowrap mb-2">------------------------------------</p>
+
+            <div class="space-y-1 text-[10px] mb-2">
+              <div class="flex justify-between font-bold">
+                <span>CONCEPTO</span>
+                <span>TOTAL</span>
+              </div>
+              <div id="form-ticket-items-body" class="space-y-1">
+                <!-- Live items -->
+              </div>
+            </div>
+
+            <p class="text-slate-400 overflow-hidden whitespace-nowrap mb-2">------------------------------------</p>
+
+            <div class="space-y-1 text-right text-[10px] font-bold">
+              <div class="flex justify-between text-xs font-black border-t border-dashed border-slate-300 pt-1">
+                <span>TOTAL:</span>
+                <span id="form-ticket-total" class="text-slate-900">0.00 €</span>
+              </div>
+            </div>
+
+            <p class="text-slate-400 overflow-hidden whitespace-nowrap mt-3 mb-3">------------------------------------</p>
+
+            <div class="text-center space-y-1">
+              <p class="text-[9px] font-bold">¡GRACIAS POR SU PREFERENCIA!</p>
+              <p class="text-[8px] text-slate-500">Documento No Válido como Factura</p>
+              <div class="flex flex-col items-center pt-2 gap-1">
+                <div class="w-24 h-5 bg-slate-900 relative flex items-center justify-between px-2">
+                  <div class="h-full w-px bg-white"></div>
+                  <div class="h-full w-0.5 bg-white"></div>
+                  <div class="h-full w-1 bg-white"></div>
+                  <div class="h-full w-px bg-white"></div>
+                  <div class="h-full w-0.5 bg-white"></div>
+                  <div class="h-full w-px bg-white"></div>
+                  <div class="h-full w-1 bg-white"></div>
+                  <div class="h-full w-0.5 bg-white"></div>
+                  <div class="h-full w-px bg-white"></div>
+                </div>
+                <span class="text-[7px] text-slate-400 tracking-widest font-mono">*APP-SHEEP-PREVENTA*</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- Buttons -->
-        <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-700 bg-slate-800/30 -mx-6 -mb-6 p-6">
-          <button type="button" onclick="closeFormModal()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors">
-            Cancelar
-          </button>
-          <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/10 hover:shadow-emerald-500/20 transition-all flex items-center gap-2">
-            <i data-lucide="save" class="w-4 h-4"></i>
-            Guardar Preventa
-          </button>
-        </div>
+      </div>
 
-      </form>
+      <!-- Action Buttons Footer -->
+      <div class="flex items-center justify-end gap-3 p-5 border-t border-slate-700 bg-slate-800/30">
+        <button type="button" onclick="closeFormModal()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors">
+          Cancelar
+        </button>
+        <button type="button" onclick="submitFormWithPrint()" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg shadow-blue-600/10 hover:shadow-blue-500/20 transition-all flex items-center gap-2">
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          Guardar e Imprimir
+        </button>
+        <button type="button" onclick="document.getElementById('hidden-form-submit').click()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/10 hover:shadow-emerald-500/20 transition-all flex items-center gap-2">
+          <i data-lucide="save" class="w-4 h-4"></i>
+          Guardar Preventa
+        </button>
+      </div>
 
     </div>
   </div>
@@ -648,6 +736,93 @@
     </div>
   </div>
 
+
+  <!-- Modal 3: Create Client -->
+  <div id="client-create-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-950/70 backdrop-blur-sm modal-backdrop" onclick="closeClientCreateModal()"></div>
+    <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl max-w-md w-full overflow-hidden flex flex-col relative z-10 transition-all scale-95 opacity-0 duration-200" id="client-create-card">
+      <div class="p-5 border-b border-slate-700 bg-slate-800/80 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="bg-emerald-500/10 text-emerald-400 p-2 rounded-lg border border-emerald-500/20">
+            <i data-lucide="user-plus" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Nuevo Cliente</h3>
+            <p class="text-xs text-slate-400">Registre un nuevo cliente en la base de datos.</p>
+          </div>
+        </div>
+        <button onclick="closeClientCreateModal()" class="text-slate-400 hover:text-white p-1 hover:bg-slate-700 rounded-lg transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form id="client-create-form" onsubmit="handleClientCreateSubmit(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Nombre Completo *</label>
+          <input type="text" id="new-client-nombre" required placeholder="Ej. Carlos Mendoza" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Teléfono de Contacto</label>
+          <input type="text" id="new-client-telefono" placeholder="Ej. +34 600 111 222" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+        </div>
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-700">
+          <button type="button" onclick="closeClientCreateModal()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg transition-all flex items-center gap-2">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            Guardar Cliente
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 4: Create Product -->
+  <div id="product-create-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-950/70 backdrop-blur-sm modal-backdrop" onclick="closeProductCreateModal()"></div>
+    <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl max-w-md w-full overflow-hidden flex flex-col relative z-10 transition-all scale-95 opacity-0 duration-200" id="product-create-card">
+      <div class="p-5 border-b border-slate-700 bg-slate-800/80 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="bg-emerald-500/10 text-emerald-400 p-2 rounded-lg border border-emerald-500/20">
+            <i data-lucide="package-plus" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Nuevo Producto</h3>
+            <p class="text-xs text-slate-400">Registre un nuevo producto en la base de datos.</p>
+          </div>
+        </div>
+        <button onclick="closeProductCreateModal()" class="text-slate-400 hover:text-white p-1 hover:bg-slate-700 rounded-lg transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form id="product-create-form" onsubmit="handleProductCreateSubmit(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Código de Material / ID *</label>
+          <input type="text" id="new-product-material" required placeholder="Ej. PROD-99" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Texto Breve del Material *</label>
+          <input type="text" id="new-product-textobreve" required placeholder="Ej. Martillo de Acero 16oz" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Precio de Venta *</label>
+          <div class="relative">
+            <input type="number" id="new-product-precio" required min="0" step="0.01" placeholder="0.00" class="w-full pr-8 pl-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+            <span class="absolute right-3.5 top-3.5 text-xs text-slate-500">€</span>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-700">
+          <button type="button" onclick="closeProductCreateModal()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg transition-all flex items-center gap-2">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            Guardar Producto
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- Notification Toasts container -->
   <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
@@ -878,10 +1053,17 @@
       updateAppSheetSyncTime();
 
       // Close dropdowns on clicking outside
-      window.addEventListener('click', () => {
+      window.addEventListener('click', (e) => {
+        // Handle closing product dropdowns when clicking outside
         document.querySelectorAll('[id^="product-panel-"]').forEach(p => {
           p.classList.add('hidden');
         });
+
+        // Close client dropdown if clicking outside customer field/container
+        const clientContainer = document.getElementById('client-dropdown-container');
+        if (clientContainer && !clientContainer.contains(e.target)) {
+          hideClientDropdown();
+        }
       });
     });
 
@@ -894,26 +1076,193 @@
     }
 
     function populateClientesDatalist() {
-      const datalist = document.getElementById('clientes-list');
-      if (datalist) {
-        datalist.innerHTML = clientesGlobal.map(c => `<option value="${c.nombre}"></option>`).join('');
-      }
+      // Datalists are replaced by custom searchable dropdowns.
     }
 
     function populateProductosDatalist() {
-      const datalist = document.getElementById('productos-list');
-      if (datalist) {
-        datalist.innerHTML = productosGlobal.map(p => `<option value="${p.concat}"></option>`).join('');
+      // Datalists are replaced by custom searchable dropdowns.
+    }
+
+    function showClientDropdown() {
+      const panel = document.getElementById('client-dropdown-panel');
+      if (!panel) return;
+      panel.classList.remove('hidden');
+      filterClientDropdown(document.getElementById('form-cliente').value);
+    }
+
+    function filterClientDropdown(query) {
+      const panel = document.getElementById('client-dropdown-panel');
+      if (!panel) return;
+
+      const q = query.toLowerCase().trim();
+      const filtered = clientesGlobal.filter(c => {
+        return (c.nombre || '').toLowerCase().includes(q) || (c.telefono || '').toLowerCase().includes(q);
+      });
+
+      panel.innerHTML = '';
+
+      if (filtered.length === 0) {
+        panel.innerHTML = `
+          <div class="text-xs text-slate-400 p-3 text-center">
+            Ningún cliente coincide. Puede escribir para crearlo o registrarlo.
+          </div>
+        `;
+        updateFormTicketPreview();
+        return;
+      }
+
+      filtered.forEach(c => {
+        const div = document.createElement('div');
+        div.className = "text-xs text-slate-200 hover:bg-emerald-600 hover:text-white p-2.5 rounded-lg cursor-pointer transition-colors flex justify-between items-center";
+        div.innerHTML = `
+          <div>
+            <div class="font-bold text-white group-hover:text-white">${c.nombre}</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">${c.telefono || 'Sin teléfono'}</div>
+          </div>
+          <i data-lucide="user" class="w-3.5 h-3.5 text-slate-500"></i>
+        `;
+        div.onmousedown = () => {
+          selectClient(c.nombre, c.telefono);
+        };
+        panel.appendChild(div);
+      });
+
+      lucide.createIcons();
+      updateFormTicketPreview();
+    }
+
+    function openClientCreateModal() {
+      const modal = document.getElementById('client-create-modal');
+      const card = document.getElementById('client-create-card');
+      document.getElementById('client-create-form').reset();
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        card.classList.remove('scale-95', 'opacity-0');
+        card.classList.add('scale-100', 'opacity-100');
+      }, 50);
+      lucide.createIcons();
+    }
+
+    function closeClientCreateModal() {
+      const modal = document.getElementById('client-create-modal');
+      const card = document.getElementById('client-create-card');
+      card.classList.remove('scale-100', 'opacity-100');
+      card.classList.add('scale-95', 'opacity-0');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 200);
+    }
+
+    async function handleClientCreateSubmit(e) {
+      e.preventDefault();
+      const nombre = document.getElementById('new-client-nombre').value.trim();
+      const telefono = document.getElementById('new-client-telefono').value.trim();
+
+      try {
+        const response = await fetch('/api/clientes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre, telefono })
+        });
+
+        if (!response.ok) {
+          throw new Error('No se pudo guardar el cliente en el servidor');
+        }
+
+        const newClient = await response.json();
+
+        // Update local arrays and localStorage
+        const local = lsGet(LS_KEYS.clientes);
+        local.push(newClient);
+        lsSet(LS_KEYS.clientes, local);
+
+        clientesGlobal = local;
+        populateClientesDatalist();
+
+        showToast('Cliente creado exitosamente', 'success');
+        closeClientCreateModal();
+
+        // If pre-sale form is open, auto-fill it
+        const clientInput = document.getElementById('form-cliente');
+        if (clientInput && !document.getElementById('form-modal').classList.contains('hidden')) {
+          clientInput.value = nombre;
+          document.getElementById('form-telefono').value = telefono || '';
+          updateFormTicketPreview();
+        }
+      } catch (err) {
+        console.error(err);
+        showToast(err.message, 'error');
       }
     }
 
-    function handleClientInput(value) {
-      const matched = clientesGlobal.find(c => c.nombre.toLowerCase().trim() === value.toLowerCase().trim());
-      if (matched && matched.telefono) {
-        const telInput = document.getElementById('form-telefono');
-        if (telInput) {
-          telInput.value = matched.telefono;
+    function openProductCreateModal() {
+      const modal = document.getElementById('product-create-modal');
+      const card = document.getElementById('product-create-card');
+      document.getElementById('product-create-form').reset();
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        card.classList.remove('scale-95', 'opacity-0');
+        card.classList.add('scale-100', 'opacity-100');
+      }, 50);
+      lucide.createIcons();
+    }
+
+    function closeProductCreateModal() {
+      const modal = document.getElementById('product-create-modal');
+      const card = document.getElementById('product-create-card');
+      card.classList.remove('scale-100', 'opacity-100');
+      card.classList.add('scale-95', 'opacity-0');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 200);
+    }
+
+    async function handleProductCreateSubmit(e) {
+      e.preventDefault();
+      const material = document.getElementById('new-product-material').value.trim();
+      const TextoBreveDelMaterial = document.getElementById('new-product-textobreve').value.trim();
+      const precio = parseFloat(document.getElementById('new-product-precio').value) || 0.0;
+
+      try {
+        const response = await fetch('/api/productos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ material, TextoBreveDelMaterial, precio })
+        });
+
+        if (!response.ok) {
+          throw new Error('No se pudo guardar el producto en el servidor');
         }
+
+        const newProduct = await response.json();
+
+        // Update local arrays and localStorage
+        const local = lsGet(LS_KEYS.stock);
+        local.push(newProduct);
+        lsSet(LS_KEYS.stock, local);
+
+        productosGlobal = local;
+        populateProductosDatalist();
+
+        showToast('Producto creado exitosamente', 'success');
+        closeProductCreateModal();
+      } catch (err) {
+        console.error(err);
+        showToast(err.message, 'error');
+      }
+    }
+
+    function selectClient(nombre, telefono) {
+      document.getElementById('form-cliente').value = nombre;
+      document.getElementById('form-telefono').value = telefono || '';
+      hideClientDropdown();
+      updateFormTicketPreview();
+    }
+
+    function hideClientDropdown() {
+      const panel = document.getElementById('client-dropdown-panel');
+      if (panel) {
+        panel.classList.add('hidden');
       }
     }
 
@@ -944,18 +1293,17 @@
 
       if (isHidden) {
         panel.classList.remove('hidden');
-        const searchInput = document.getElementById(`product-search-${rowIndex}`);
-        if (searchInput) {
-          searchInput.value = '';
-          filterProductDropdown(rowIndex, '');
-          searchInput.focus();
-        }
+        const displayInput = document.getElementById(`product-display-${rowIndex}`);
+        filterProductDropdown(rowIndex, displayInput ? displayInput.value : '');
       } else {
         panel.classList.add('hidden');
       }
     }
 
     function filterProductDropdown(rowIndex, query) {
+      const panel = document.getElementById(`product-panel-${rowIndex}`);
+      if (panel) panel.classList.remove('hidden');
+
       const listContainer = document.getElementById(`product-options-${rowIndex}`);
       if (!listContainer) return;
 
@@ -971,19 +1319,19 @@
       listContainer.innerHTML = '';
 
       if (filtered.length === 0) {
-        listContainer.innerHTML = '<div class="text-xs text-slate-500 py-2 px-3">No se encontraron productos</div>';
+        listContainer.innerHTML = '<div class="text-xs text-slate-400 py-3 text-center">No se encontraron productos</div>';
         return;
       }
 
       filtered.forEach(p => {
         const optionDiv = document.createElement('div');
-        optionDiv.className = "text-xs text-slate-200 hover:bg-emerald-600 hover:text-white py-1.5 px-3 rounded cursor-pointer transition-colors";
+        optionDiv.className = "text-xs text-slate-200 hover:bg-emerald-600 hover:text-white p-2.5 rounded-lg cursor-pointer transition-colors";
         const displayName = p.TextoBreveDelMaterial || p.concat || p.material;
         optionDiv.innerHTML = `
-          <div class="font-semibold truncate">${displayName}</div>
-          <div class="text-[10px] text-slate-400">ID: ${p.material} | Precio: ${p.precio.toFixed(2)} €</div>
+          <div class="font-bold text-white group-hover:text-white truncate">${displayName}</div>
+          <div class="text-[10px] text-slate-400 mt-0.5">ID: ${p.material} • Precio: ${p.precio.toFixed(2)} €</div>
         `;
-        optionDiv.onclick = (e) => {
+        optionDiv.onmousedown = (e) => {
           e.stopPropagation();
           selectProduct(rowIndex, p.material);
         };
@@ -1027,6 +1375,7 @@
       }
 
       calculateFormTotal();
+      updateFormTicketPreview();
     }
 
     // Fetch all preventas (intenta sincronizar con AppSheet, luego pinta desde caché local)
@@ -1152,29 +1501,26 @@
       tr.innerHTML = `
         <td class="py-2 px-4 relative">
           <div class="relative" id="product-dropdown-container-${rowIndex}">
-            <div class="flex items-center bg-slate-900 border border-slate-700 rounded-lg overflow-hidden cursor-pointer" onclick="toggleProductDropdown(${rowIndex}, event)">
-              <input type="text" readonly id="product-display-${rowIndex}" placeholder="Seleccionar producto..." class="w-full bg-transparent px-3 py-1.5 text-xs text-white focus:outline-none cursor-pointer" required value="${getProductName(producto)}">
-              <div class="px-2 text-slate-400 flex items-center justify-center">
+            <div class="flex items-center bg-slate-900 border border-slate-700 rounded-lg overflow-hidden">
+              <input type="text" id="product-display-${rowIndex}" autocomplete="off" onfocus="toggleProductDropdown(${rowIndex}, event)" oninput="filterProductDropdown(${rowIndex}, this.value)" placeholder="Buscar o seleccionar producto..." class="w-full bg-transparent px-3 py-1.5 text-xs text-white focus:outline-none" required value="${getProductName(producto)}">
+              <div class="px-2 text-slate-400 flex items-center justify-center cursor-pointer" onclick="toggleProductDropdown(${rowIndex}, event)">
                 <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
               </div>
             </div>
 
-            <div id="product-panel-${rowIndex}" class="hidden absolute left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 p-2 space-y-2 max-h-60 flex flex-col" onclick="event.stopPropagation()">
-              <div class="relative flex-shrink-0">
-                <input type="text" id="product-search-${rowIndex}" placeholder="Buscar producto..." oninput="filterProductDropdown(${rowIndex}, this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-emerald-500">
-              </div>
-              <div id="product-options-${rowIndex}" class="overflow-y-auto flex-1 space-y-0.5 max-h-40">
+            <div id="product-panel-${rowIndex}" class="hidden absolute left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 p-2 max-h-60 flex flex-col" onclick="event.stopPropagation()">
+              <div id="product-options-${rowIndex}" class="overflow-y-auto flex-1 space-y-0.5 max-h-48">
                 <!-- Filter options -->
               </div>
             </div>
           </div>
         </td>
         <td class="py-2 px-3">
-          <input type="number" value="${cantidad}" min="1" step="1" onchange="updateFormItem(${rowIndex}, 'cantidad', this.value)" required class="w-full text-center px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
+          <input type="number" value="${cantidad}" min="1" step="1" oninput="updateFormItem(${rowIndex}, 'cantidad', this.value)" required class="w-full text-center px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
         </td>
         <td class="py-2 px-3">
           <div class="relative">
-            <input type="number" value="${precio_unitario}" min="0" step="0.01" onchange="updateFormItem(${rowIndex}, 'precio_unitario', this.value)" required class="w-full text-right pr-6 pl-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
+            <input type="number" value="${precio_unitario}" min="0" step="0.01" oninput="updateFormItem(${rowIndex}, 'precio_unitario', this.value)" required class="w-full text-right pr-6 pl-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
             <span class="absolute right-2 top-2 text-[10px] text-slate-500">€</span>
           </div>
         </td>
@@ -1234,11 +1580,69 @@
       calculateFormTotal();
     }
 
+    // Update live ticket preview inside pre-sale creation/edition modal
+    function updateFormTicketPreview() {
+      const id = document.getElementById('form-id').value || 'NUEVA';
+      const cliente = document.getElementById('form-cliente').value || 'CLIENTE';
+      const telefono = document.getElementById('form-telefono').value || 'SIN CONTACTO';
+      const fecha = document.getElementById('form-fecha').value || new Date().toISOString().split('T')[0];
+
+      document.getElementById('form-ticket-id').textContent = id.replace('2026-01-M1P505-', '');
+      document.getElementById('form-ticket-fecha').textContent = fecha;
+      document.getElementById('form-ticket-cliente').textContent = cliente.toUpperCase();
+      document.getElementById('form-ticket-telefono').textContent = telefono.toUpperCase();
+
+      const container = document.getElementById('form-ticket-items-body');
+      container.innerHTML = '';
+
+      const activeRows = formItems.filter(item => item !== null && item.producto.trim() !== '');
+
+      if (activeRows.length === 0) {
+        container.innerHTML = '<div class="text-[9px] text-slate-400 py-1 text-center">Sin artículos</div>';
+        document.getElementById('form-ticket-total').textContent = '0.00 €';
+        return;
+      }
+
+      let grandTotal = 0.0;
+
+      activeRows.forEach(item => {
+        const subtotal = item.cantidad * item.precio_unitario;
+        grandTotal += subtotal;
+
+        const matchedProd = productosGlobal.find(p => p.material === item.producto);
+        const nameToDisplay = matchedProd && matchedProd.TextoBreveDelMaterial ? matchedProd.TextoBreveDelMaterial : item.producto;
+
+        const div = document.createElement('div');
+        div.className = "space-y-0.5";
+        div.innerHTML = `
+          <div class="flex justify-between">
+            <span class="font-bold truncate max-w-[170px]">${nameToDisplay.toUpperCase()}</span>
+            <span>${subtotal.toFixed(2)} €</span>
+          </div>
+          <div class="text-[8px] text-slate-500 pl-2">
+            ${item.cantidad} UNID x ${item.precio_unitario.toFixed(2)} €
+          </div>
+        `;
+        container.appendChild(div);
+      });
+
+      document.getElementById('form-ticket-total').textContent = `${grandTotal.toFixed(2)} €`;
+    }
+
+    // Flag to handle printing immediately after successful save
+    let printAfterSave = false;
+
+    function submitFormWithPrint() {
+      printAfterSave = true;
+      document.getElementById('hidden-form-submit').click();
+    }
+
     // Calculate grand total in form
     function calculateFormTotal() {
       const activeRows = formItems.filter(item => item !== null);
       const grandTotal = activeRows.reduce((sum, item) => sum + (item.cantidad * item.precio_unitario), 0);
       document.getElementById('form-grand-total').textContent = `${grandTotal.toFixed(2)} €`;
+      updateFormTicketPreview();
     }
 
     // Modal Control: Create
@@ -1255,6 +1659,7 @@
       document.getElementById('form-grand-total').textContent = '0.00 €';
       
       formItems = [];
+      printAfterSave = false;
 
       // Set titles
       document.getElementById('form-modal-title').textContent = 'Nueva Preventa';
@@ -1271,6 +1676,7 @@
       }, 50);
 
       lucide.createIcons();
+      updateFormTicketPreview();
     }
 
     // Modal Control: Edit
@@ -1317,6 +1723,7 @@
 
       lucide.createIcons();
       calculateFormTotal();
+      updateFormTicketPreview();
     }
 
     // Close Create/Edit Modal
@@ -1362,6 +1769,8 @@
         const preventasLocal = lsGet(LS_KEYS.preventa);
         const detallesLocal = lsGet(LS_KEYS.detalle);
         const totalCalculado = filteredDetails.reduce((sum, it) => sum + (parseFloat(it.cantidad) || 0) * (parseFloat(it.precio_unitario) || 0), 0);
+
+        let savedId = id;
 
         if (id) {
           // Editar
@@ -1425,6 +1834,7 @@
             maxNum = 331; // fallback default
           }
           const newId = prefix + (maxNum + 1);
+          savedId = newId;
 
           const newPreventa = { id: newId, cliente, telefono, fecha, total: totalCalculado, estado: estado || 'Pendiente', notas };
           const newDetalles = filteredDetails.map(item => ({
@@ -1470,6 +1880,13 @@
         
         // Mock sheets webhook trigger as well
         triggerMockSheetSync();
+
+        // Print ticket simultaneously if user requested "Guardar e Imprimir"
+        if (printAfterSave && savedId) {
+          setTimeout(() => {
+            triggerPrint(savedId);
+          }, 300);
+        }
       } catch (err) {
         console.error(err);
         showToast(err.message, 'error');

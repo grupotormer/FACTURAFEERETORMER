@@ -28,9 +28,9 @@ def run_verification(page):
   page.locator("#product-display-0").click()
   page.wait_for_timeout(300)
 
-  # Type inside search input in dropdown
+  # Type inside writable search input
   print("6. Typing in product search input...")
-  page.locator("#product-search-0").fill("PRI-000233")
+  page.locator("#product-display-0").fill("PRI-000233")
   page.wait_for_timeout(500)
 
   # Select first filtered option

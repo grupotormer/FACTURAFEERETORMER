@@ -335,6 +335,86 @@ async function syncFromAppSheetToSQLite() {
 
 // REST API Endpoints
 
+// POST /api/clientes - Create a new client
+app.post('/api/clientes', async (req, res) => {
+  const { id, nombre, telefono } = req.body;
+
+  if (!nombre) {
+    return res.status(400).json({ error: 'El nombre del cliente es obligatorio.' });
+  }
+
+  // Generate an ID if not provided
+  const clientId = id || 'cli-' + Math.random().toString(36).substring(2, 10);
+
+  try {
+    const insertCliente = db.prepare(`
+      INSERT INTO CLIENTES (id, nombre, telefono)
+      VALUES (?, ?, ?)
+    `);
+
+    insertCliente.run(clientId, nombre, telefono || '');
+
+    // Propagate to AppSheet (non-blocking)
+    const cRow = {
+      idcliente: clientId,
+      nombrecliente: nombre,
+      telefono: telefono || '',
+      IDcliente: clientId,
+      NombreCliente: nombre,
+      ID: clientId,
+      Nombre: nombre
+    };
+
+    await callAppSheetAPI("clientes", "Add", [cRow]).catch(err => {
+      console.error("AppSheet API clientes Add failed:", err.message);
+    });
+
+    res.status(201).json({ id: clientId, nombre, telefono: telefono || '' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al guardar el cliente: ' + err.message });
+  }
+});
+
+// POST /api/productos - Create a new stock product
+app.post('/api/productos', async (req, res) => {
+  const { material, TextoBreveDelMaterial, precio } = req.body;
+
+  if (!material || !TextoBreveDelMaterial) {
+    return res.status(400).json({ error: 'El material (ID) y el TextoBreveDelMaterial son obligatorios.' });
+  }
+
+  const precioVal = parseFloat(precio) || 0.0;
+  const concat = `${TextoBreveDelMaterial} [${material}] - ${precioVal.toFixed(2)} €`;
+
+  try {
+    const insertStock = db.prepare(`
+      INSERT INTO STOCK (material, TextoBreveDelMaterial, precio, concat)
+      VALUES (?, ?, ?, ?)
+    `);
+
+    insertStock.run(material, TextoBreveDelMaterial, precioVal, concat);
+
+    // Propagate to AppSheet (non-blocking)
+    const sRow = {
+      material: material,
+      TextoBreveDelMaterial: TextoBreveDelMaterial,
+      Precio: String(precioVal),
+      concat: concat,
+      precio: precioVal
+    };
+
+    await callAppSheetAPI("stock", "Add", [sRow]).catch(err => {
+      console.error("AppSheet API stock Add failed:", err.message);
+    });
+
+    res.status(201).json({ material, TextoBreveDelMaterial, precio: precioVal, concat });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al guardar el producto: ' + err.message });
+  }
+});
+
 // GET /api/clientes - Get all clients
 app.get('/api/clientes', (req, res) => {
   try {

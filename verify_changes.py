@@ -9,6 +9,11 @@ def run_verification(page):
   page.goto("http://localhost:3000")
   page.wait_for_load_state("networkidle")
 
+  # Clear local storage to re-seed with dollars
+  page.evaluate("localStorage.clear();")
+  page.reload()
+  page.wait_for_load_state("networkidle")
+
   # Wait for background sync to complete to ensure real products are loaded
   print("Waiting 3 seconds for background sync to complete...")
   page.wait_for_timeout(3000)
@@ -40,10 +45,10 @@ def run_verification(page):
 
   # Check that price is populated
   price_val = page.locator("#form-row-0 input[type='number'][step='0.01']").input_value()
-  print(f"-> Selected product price: {price_val} €")
+  print(f"-> Selected product price: {price_val} $")
 
   # Take screenshot of the filled form
-  page.screenshot(path="/home/jules/verification/filled_form.png")
+  page.screenshot(path="filled_form.png")
 
   # Submit form
   print("8. Saving preventa...")
@@ -58,8 +63,8 @@ def run_verification(page):
 
   # Take final verification screenshot focusing on the receipt preview
   print("10. Taking final screenshot of the receipt preview...")
-  page.screenshot(path="/home/jules/verification/verification.png")
-  print("-> Verification screenshot saved at /home/jules/verification/verification.png")
+  page.screenshot(path="verification.png")
+  print("-> Verification screenshot saved at verification.png")
 
 if __name__ == "__main__":
   # Create verification folder

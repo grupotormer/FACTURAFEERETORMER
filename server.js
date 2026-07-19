@@ -82,14 +82,14 @@ if (countStock.count === 0) {
     VALUES (?, ?, ?, ?)
   `);
   db.transaction(() => {
-    insertStock.run('Saco-01', 'Saco de Alimento Premium Ovejas 25kg', 45.00, 'Saco de Alimento Premium Ovejas 25kg [Saco-01] - 45.00 €');
-    insertStock.run('Sup-01', 'Suplemento Vitamínico Ovino 5L', 40.50, 'Suplemento Vitamínico Ovino 5L [Sup-01] - 40.50 €');
-    insertStock.run('Esq-01', 'Esquiladora Profesional SheepCut', 210.00, 'Esquiladora Profesional SheepCut [Esq-01] - 210.00 €');
-    insertStock.run('Cuc-01', 'Cuchillas de repuesto SheepCut 4T', 20.00, 'Cuchillas de repuesto SheepCut 4T [Cuc-01] - 20.00 €');
-    insertStock.run('Ide-01', 'Identificadores de Oreja (Pack 100u)', 25.00, 'Identificadores de Oreja (Pack 100u) [Ide-01] - 25.00 €');
-    insertStock.run('Ten-01', 'Tenaza Aplicadora de Crotales', 35.00, 'Tenaza Aplicadora de Crotales [Ten-01] - 35.00 €');
-    insertStock.run('PRI-000233', 'UNI TORNILLO PARA BISAGRA DE 1/2"', 0.10, 'PRI-000233 UNI TORNILLO PARA BISAGRA DE 1/2" Inventario en almacén 5980 - 0.10 €');
-    insertStock.run('PRI-000148', 'PZA REMACHE POP 1/8X1/2 44523', 0.03, 'PRI-000148 PZA REMACHE POP 1/8X1/2 44523 Inventario en almacén 552 - 0.03 €');
+    insertStock.run('Saco-01', 'Saco de Alimento Premium Ovejas 25kg', 45.00, 'Saco de Alimento Premium Ovejas 25kg [Saco-01] - 45.00 $');
+    insertStock.run('Sup-01', 'Suplemento Vitamínico Ovino 5L', 40.50, 'Suplemento Vitamínico Ovino 5L [Sup-01] - 40.50 $');
+    insertStock.run('Esq-01', 'Esquiladora Profesional SheepCut', 210.00, 'Esquiladora Profesional SheepCut [Esq-01] - 210.00 $');
+    insertStock.run('Cuc-01', 'Cuchillas de repuesto SheepCut 4T', 20.00, 'Cuchillas de repuesto SheepCut 4T [Cuc-01] - 20.00 $');
+    insertStock.run('Ide-01', 'Identificadores de Oreja (Pack 100u)', 25.00, 'Identificadores de Oreja (Pack 100u) [Ide-01] - 25.00 $');
+    insertStock.run('Ten-01', 'Tenaza Aplicadora de Crotales', 35.00, 'Tenaza Aplicadora de Crotales [Ten-01] - 35.00 $');
+    insertStock.run('PRI-000233', 'UNI TORNILLO PARA BISAGRA DE 1/2"', 0.10, 'PRI-000233 UNI TORNILLO PARA BISAGRA DE 1/2" Inventario en almacén 5980 - 0.10 $');
+    insertStock.run('PRI-000148', 'PZA REMACHE POP 1/8X1/2 44523', 0.03, 'PRI-000148 PZA REMACHE POP 1/8X1/2 44523 Inventario en almacén 552 - 0.03 $');
   })();
 }
 
@@ -255,7 +255,7 @@ async function syncFromAppSheetToSQLite() {
       const material = sNormalized.material || '';
       const textobrevedelmaterial = s.TextoBreveDelMaterial || sNormalized.textobrevedelmaterial || '';
       const precioVal = parseFloat(s.Precio || sNormalized.precio) || 0.0;
-      const concat = sNormalized.concat || '';
+      const concat = (sNormalized.concat || '').replace(/€/g, '$');
       if (material && concat) {
         insertStock.run(material, textobrevedelmaterial, precioVal, concat);
       }
@@ -385,7 +385,7 @@ app.post('/api/productos', async (req, res) => {
   }
 
   const precioVal = parseFloat(precio) || 0.0;
-  const concat = `${TextoBreveDelMaterial} [${material}] - ${precioVal.toFixed(2)} €`;
+  const concat = `${TextoBreveDelMaterial} [${material}] - ${precioVal.toFixed(2)} $`;
 
   try {
     const insertStock = db.prepare(`

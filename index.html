@@ -135,9 +135,53 @@
     </header>
 
     <!-- Main Content Area -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col lg:flex-row gap-8">
       
-      <!-- Statistics Dashboard Row -->
+      <!-- Sidebar (no-print) -->
+      <aside class="w-full lg:w-80 flex-shrink-0 space-y-6 no-print">
+        <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl p-6">
+          <div class="flex items-center gap-2 mb-4">
+            <i data-lucide="settings" class="text-emerald-400 w-5 h-5"></i>
+            <h3 class="text-base font-bold text-white">Editar Plantilla</h3>
+          </div>
+          <p class="text-xs text-slate-400 mb-4">Actualice en tiempo real los datos fijos del ticket de impresión y previsualización.</p>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Slogan / Línea 1</label>
+              <input type="text" id="config-slogan" oninput="saveAndApplyTicketConfig()" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Nombre de Empresa</label>
+              <input type="text" id="config-company" oninput="saveAndApplyTicketConfig()" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">NIT / ID Empresa</label>
+              <input type="text" id="config-nit" oninput="saveAndApplyTicketConfig()" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Pie de Página (Línea 1)</label>
+              <input type="text" id="config-footer1" oninput="saveAndApplyTicketConfig()" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Pie de Página (Línea 2)</label>
+              <input type="text" id="config-footer2" oninput="saveAndApplyTicketConfig()" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
+            </div>
+
+            <div class="pt-4 border-t border-slate-700">
+              <button onclick="resetTicketConfigToDefault()" class="w-full py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-300 hover:text-white rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5">
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                Restablecer Valores
+              </button>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Content Block -->
+      <div class="flex-1 min-w-0 space-y-8">
+
+        <!-- Statistics Dashboard Row -->
       <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
         
         <!-- Total Revenue -->
@@ -147,7 +191,7 @@
           </div>
           <div>
             <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Ingreso Total</p>
-            <h3 class="text-2xl font-bold text-white mt-1" id="stat-revenue">0.00 €</h3>
+            <h3 class="text-2xl font-bold text-white mt-1" id="stat-revenue">0.00 $</h3>
           </div>
         </div>
 
@@ -321,6 +365,7 @@
         </div>
       </section>
 
+      </div> <!-- End of Main Content Block -->
     </main>
 
     <!-- Footer -->
@@ -452,7 +497,7 @@
             <div class="flex justify-end mt-4">
               <div class="bg-slate-900 px-6 py-3 rounded-xl border border-slate-700 flex items-center gap-4">
                 <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total de la Orden:</span>
-                <span class="text-xl font-black text-emerald-400" id="form-grand-total">0.00 €</span>
+                <span class="text-xl font-black text-emerald-400" id="form-grand-total">0.00 $</span>
               </div>
             </div>
 
@@ -477,9 +522,9 @@
           <div class="bg-white text-slate-900 p-5 rounded shadow-inner w-full max-w-[280px] font-mono text-xs border border-slate-300 leading-tight select-none pointer-events-none" id="form-digital-receipt">
             <div class="text-center space-y-1 mb-4">
               <img src="Logoferre.png" alt="Logo" class="mx-auto h-12 object-contain mb-2">
-              <p class="text-[10px] text-slate-700">e confianza con productos de calida</p>
-              <h4 class="font-bold text-xs tracking-wide">res García</h4>
-              <p class="text-[10px] text-slate-700">7-101-0</p>
+              <p id="form-ticket-slogan" class="text-[10px] text-slate-700">e confianza con productos de calida</p>
+              <h4 id="form-ticket-company" class="font-bold text-xs tracking-wide">res García</h4>
+              <p id="form-ticket-nit" class="text-[10px] text-slate-700">7-101-0</p>
             </div>
 
             <div class="space-y-1 text-[10px] mb-3">
@@ -506,15 +551,15 @@
             <div class="space-y-1 text-right text-[10px] font-bold">
               <div class="flex justify-between text-xs font-black border-t border-dashed border-slate-300 pt-1">
                 <span>TOTAL:</span>
-                <span id="form-ticket-total" class="text-slate-900">0.00 €</span>
+                <span id="form-ticket-total" class="text-slate-900">0.00 $</span>
               </div>
             </div>
 
             <p class="text-slate-400 overflow-hidden whitespace-nowrap mt-3 mb-3">------------------------------------</p>
 
             <div class="text-center space-y-1">
-              <p class="text-[9px] font-bold">¡GRACIAS POR SU PREFERENCIA!</p>
-              <p class="text-[8px] text-slate-500">Documento No Válido como Factura</p>
+              <p id="form-ticket-footer1" class="text-[9px] font-bold">¡GRACIAS POR SU PREFERENCIA!</p>
+              <p id="form-ticket-footer2" class="text-[8px] text-slate-500">Documento No Válido como Factura</p>
               <div class="flex flex-col items-center pt-2 gap-1">
                 <div class="w-24 h-5 bg-slate-900 relative flex items-center justify-between px-2">
                   <div class="h-full w-px bg-white"></div>
@@ -656,9 +701,9 @@
           <div class="bg-white text-slate-900 p-5 rounded shadow-inner w-full max-w-[280px] font-mono text-xs border border-slate-300 leading-tight select-none pointer-events-none" id="digital-receipt">
             <div class="text-center space-y-1 mb-4">
               <img src="Logoferre.png" alt="Logo" class="mx-auto h-12 object-contain mb-2">
-              <p class="text-[10px] text-slate-700">e confianza con productos de calida</p>
-              <h4 class="font-bold text-xs tracking-wide">res García</h4>
-              <p class="text-[10px] text-slate-700">7-101-0</p>
+              <p id="view-ticket-slogan" class="text-[10px] text-slate-700">e confianza con productos de calida</p>
+              <h4 id="view-ticket-company" class="font-bold text-xs tracking-wide">res García</h4>
+              <p id="view-ticket-nit" class="text-[10px] text-slate-700">7-101-0</p>
             </div>
 
             <div class="space-y-1 text-[10px] mb-3">
@@ -686,15 +731,15 @@
             <div class="space-y-1 text-right text-[10px] font-bold">
               <div class="flex justify-between text-xs font-black border-t border-dashed border-slate-300 pt-1">
                 <span>TOTAL:</span>
-                <span id="ticket-total" class="text-slate-900">0.00 €</span>
+                <span id="ticket-total" class="text-slate-900">0.00 $</span>
               </div>
             </div>
 
             <p class="text-slate-400 overflow-hidden whitespace-nowrap mt-3 mb-3">------------------------------------</p>
 
             <div class="text-center space-y-1">
-              <p class="text-[9px] font-bold">¡GRACIAS POR SU PREFERENCIA!</p>
-              <p class="text-[8px] text-slate-500">Documento No Válido como Factura</p>
+              <p id="view-ticket-footer1" class="text-[9px] font-bold">¡GRACIAS POR SU PREFERENCIA!</p>
+              <p id="view-ticket-footer2" class="text-[8px] text-slate-500">Documento No Válido como Factura</p>
               
               <!-- Mock QR/Barcode -->
               <div class="flex flex-col items-center pt-2 gap-1">
@@ -806,7 +851,7 @@
           <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Precio de Venta *</label>
           <div class="relative">
             <input type="number" id="new-product-precio" required min="0" step="0.01" placeholder="0.00" class="w-full pr-8 pl-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
-            <span class="absolute right-3.5 top-3.5 text-xs text-slate-500">€</span>
+            <span class="absolute right-3.5 top-3.5 text-xs text-slate-500">$</span>
           </div>
         </div>
         <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-700">
@@ -894,14 +939,14 @@
       const existingStock = lsGet(LS_KEYS.stock);
       if (existingStock.length === 0 || !existingStock[0].TextoBreveDelMaterial) {
         lsSet(LS_KEYS.stock, [
-          { material: 'Saco-01', TextoBreveDelMaterial: 'Saco de Alimento Premium Ovejas 25kg', precio: 45.00, concat: 'Saco de Alimento Premium Ovejas 25kg [Saco-01] - 45.00 €' },
-          { material: 'Sup-01', TextoBreveDelMaterial: 'Suplemento Vitamínico Ovino 5L', precio: 40.50, concat: 'Suplemento Vitamínico Ovino 5L [Sup-01] - 40.50 €' },
-          { material: 'Esq-01', TextoBreveDelMaterial: 'Esquiladora Profesional SheepCut', precio: 210.00, concat: 'Esquiladora Profesional SheepCut [Esq-01] - 210.00 €' },
-          { material: 'Cuc-01', TextoBreveDelMaterial: 'Cuchillas de repuesto SheepCut 4T', precio: 20.00, concat: 'Cuchillas de repuesto SheepCut 4T [Cuc-01] - 20.00 €' },
-          { material: 'Ide-01', TextoBreveDelMaterial: 'Identificadores de Oreja (Pack 100u)', precio: 25.00, concat: 'Identificadores de Oreja (Pack 100u) [Ide-01] - 25.00 €' },
-          { material: 'Ten-01', TextoBreveDelMaterial: 'Tenaza Aplicadora de Crotales', precio: 35.00, concat: 'Tenaza Aplicadora de Crotales [Ten-01] - 35.00 €' },
-          { material: 'PRI-000233', TextoBreveDelMaterial: 'UNI TORNILLO PARA BISAGRA DE 1/2"', precio: 0.10, concat: 'PRI-000233 UNI TORNILLO PARA BISAGRA DE 1/2" Inventario en almacén 5980 - 0.10 €' },
-          { material: 'PRI-000148', TextoBreveDelMaterial: 'PZA REMACHE POP 1/8X1/2 44523', precio: 0.03, concat: 'PRI-000148 PZA REMACHE POP 1/8X1/2 44523 Inventario en almacén 552 - 0.03 €' }
+          { material: 'Saco-01', TextoBreveDelMaterial: 'Saco de Alimento Premium Ovejas 25kg', precio: 45.00, concat: 'Saco de Alimento Premium Ovejas 25kg [Saco-01] - 45.00 $' },
+          { material: 'Sup-01', TextoBreveDelMaterial: 'Suplemento Vitamínico Ovino 5L', precio: 40.50, concat: 'Suplemento Vitamínico Ovino 5L [Sup-01] - 40.50 $' },
+          { material: 'Esq-01', TextoBreveDelMaterial: 'Esquiladora Profesional SheepCut', precio: 210.00, concat: 'Esquiladora Profesional SheepCut [Esq-01] - 210.00 $' },
+          { material: 'Cuc-01', TextoBreveDelMaterial: 'Cuchillas de repuesto SheepCut 4T', precio: 20.00, concat: 'Cuchillas de repuesto SheepCut 4T [Cuc-01] - 20.00 $' },
+          { material: 'Ide-01', TextoBreveDelMaterial: 'Identificadores de Oreja (Pack 100u)', precio: 25.00, concat: 'Identificadores de Oreja (Pack 100u) [Ide-01] - 25.00 $' },
+          { material: 'Ten-01', TextoBreveDelMaterial: 'Tenaza Aplicadora de Crotales', precio: 35.00, concat: 'Tenaza Aplicadora de Crotales [Ten-01] - 35.00 $' },
+          { material: 'PRI-000233', TextoBreveDelMaterial: 'UNI TORNILLO PARA BISAGRA DE 1/2"', precio: 0.10, concat: 'PRI-000233 UNI TORNILLO PARA BISAGRA DE 1/2" Inventario en almacén 5980 - 0.10 $' },
+          { material: 'PRI-000148', TextoBreveDelMaterial: 'PZA REMACHE POP 1/8X1/2 44523', precio: 0.03, concat: 'PRI-000148 PZA REMACHE POP 1/8X1/2 44523 Inventario en almacén 552 - 0.03 $' }
         ]);
       }
       if (lsGet(LS_KEYS.preventa).length === 0) {
@@ -983,7 +1028,7 @@
             material: n.material || '',
             TextoBreveDelMaterial: s.TextoBreveDelMaterial || n.textobrevedelmaterial || '',
             precio: parseFloat(s.Precio || n.precio) || 0,
-            concat: n.concat || ''
+            concat: (n.concat || '').replace(/$/g, '$')
           };
         }).filter(s => s.material && s.concat);
         if (stock.length > 0) lsSet(LS_KEYS.stock, stock);
@@ -1042,6 +1087,9 @@
 
       // Asegura que haya datos de demostración en la caché local
       seedLocalDataIfEmpty();
+
+      // Load Ticket Config
+      loadTicketConfig();
 
       // Load Data (caché local + intento de sincronización con AppSheet)
       fetchPreventas();
@@ -1327,7 +1375,7 @@
         const displayName = p.TextoBreveDelMaterial || p.concat || p.material;
         optionDiv.innerHTML = `
           <div class="font-bold text-white group-hover:text-white truncate">${displayName}</div>
-          <div class="text-[10px] text-slate-400 mt-0.5">ID: ${p.material} • Precio: ${p.precio.toFixed(2)} €</div>
+          <div class="text-[10px] text-slate-400 mt-0.5">ID: ${p.material} • Precio: ${p.precio.toFixed(2)} $</div>
         `;
         optionDiv.onmousedown = (e) => {
           e.stopPropagation();
@@ -1363,7 +1411,7 @@
         const sub = (qty * matched.precio).toFixed(2);
         const subEl = document.getElementById(`form-subtotal-${rowIndex}`);
         if (subEl) {
-          subEl.textContent = `${sub} €`;
+          subEl.textContent = `${sub} $`;
         }
       }
 
@@ -1397,7 +1445,7 @@
       document.getElementById('stat-count').textContent = count;
       document.getElementById('stat-completed').textContent = completed;
       document.getElementById('stat-pending').textContent = pending;
-      document.getElementById('stat-revenue').textContent = `${revenue.toFixed(2)} €`;
+      document.getElementById('stat-revenue').textContent = `${revenue.toFixed(2)} $`;
     }
 
     // Filter and Render PREVENTAS in table
@@ -1453,7 +1501,7 @@
               ${itemsCount} u. <span class="text-[10px] text-slate-400">(${itemsDistinct} ref)</span>
             </span>
           </td>
-          <td class="py-3 px-6 text-right font-black text-emerald-400 font-mono text-base">${p.total.toFixed(2)} €</td>
+          <td class="py-3 px-6 text-right font-black text-emerald-400 font-mono text-base">${p.total.toFixed(2)} $</td>
           <td class="py-3 px-6 text-center">
             <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${badgeClass}">
               ${p.estado}
@@ -1519,11 +1567,11 @@
         <td class="py-2 px-3">
           <div class="relative">
             <input type="number" value="${precio_unitario}" min="0" step="0.01" oninput="updateFormItem(${rowIndex}, 'precio_unitario', this.value)" required class="w-full text-right pr-6 pl-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
-            <span class="absolute right-2 top-2 text-[10px] text-slate-500">€</span>
+            <span class="absolute right-2 top-2 text-[10px] text-slate-500">$</span>
           </div>
         </td>
         <td class="py-2 px-4 text-right font-mono text-slate-300 text-xs font-semibold" id="form-subtotal-${rowIndex}">
-          ${(cantidad * precio_unitario).toFixed(2)} €
+          ${(cantidad * precio_unitario).toFixed(2)} $
         </td>
         <td class="py-2 px-2 text-center">
           <button type="button" onclick="removeDetailRow(${rowIndex})" class="text-slate-500 hover:text-red-400 p-1.5 hover:bg-slate-800 rounded-lg transition-colors">
@@ -1572,7 +1620,7 @@
       const sub = (formItems[index].cantidad * formItems[index].precio_unitario).toFixed(2);
       const subEl = document.getElementById(`form-subtotal-${index}`);
       if (subEl) {
-        subEl.textContent = `${sub} €`;
+        subEl.textContent = `${sub} $`;
       }
 
       calculateFormTotal();
@@ -1597,7 +1645,7 @@
 
       if (activeRows.length === 0) {
         container.innerHTML = '<div class="text-[9px] text-slate-400 py-1 text-center">Sin artículos</div>';
-        document.getElementById('form-ticket-total').textContent = '0.00 €';
+        document.getElementById('form-ticket-total').textContent = '0.00 $';
         return;
       }
 
@@ -1615,16 +1663,16 @@
         div.innerHTML = `
           <div class="flex justify-between">
             <span class="font-bold truncate max-w-[170px]">${nameToDisplay.toUpperCase()}</span>
-            <span>${subtotal.toFixed(2)} €</span>
+            <span>${subtotal.toFixed(2)} $</span>
           </div>
           <div class="text-[8px] text-slate-500 pl-2">
-            ${item.cantidad} UNID x ${item.precio_unitario.toFixed(2)} €
+            ${item.cantidad} UNID x ${item.precio_unitario.toFixed(2)} $
           </div>
         `;
         container.appendChild(div);
       });
 
-      document.getElementById('form-ticket-total').textContent = `${grandTotal.toFixed(2)} €`;
+      document.getElementById('form-ticket-total').textContent = `${grandTotal.toFixed(2)} $`;
     }
 
     // Flag to handle printing immediately after successful save
@@ -1639,7 +1687,7 @@
     function calculateFormTotal() {
       const activeRows = formItems.filter(item => item !== null);
       const grandTotal = activeRows.reduce((sum, item) => sum + (item.cantidad * item.precio_unitario), 0);
-      document.getElementById('form-grand-total').textContent = `${grandTotal.toFixed(2)} €`;
+      document.getElementById('form-grand-total').textContent = `${grandTotal.toFixed(2)} $`;
       updateFormTicketPreview();
     }
 
@@ -1654,7 +1702,7 @@
       document.getElementById('form-fecha').value = new Date().toISOString().split('T')[0];
       document.getElementById('form-items-body').innerHTML = '';
       document.getElementById('form-items-empty').classList.remove('hidden');
-      document.getElementById('form-grand-total').textContent = '0.00 €';
+      document.getElementById('form-grand-total').textContent = '0.00 $';
       
       formItems = [];
       printAfterSave = false;
@@ -1952,8 +2000,8 @@
           tr.innerHTML = `
             <td class="py-2.5 px-4 text-slate-200 font-semibold">${d.producto}</td>
             <td class="py-2.5 px-3 text-center text-slate-300 font-mono">${d.cantidad} u.</td>
-            <td class="py-2.5 px-3 text-right text-slate-400 font-mono">${d.precio_unitario.toFixed(2)} €</td>
-            <td class="py-2.5 px-4 text-right font-black text-emerald-400 font-mono">${d.subtotal.toFixed(2)} €</td>
+            <td class="py-2.5 px-3 text-right text-slate-400 font-mono">${d.precio_unitario.toFixed(2)} $</td>
+            <td class="py-2.5 px-4 text-right font-black text-emerald-400 font-mono">${d.subtotal.toFixed(2)} $</td>
           `;
           tbody.appendChild(tr);
         });
@@ -1978,17 +2026,17 @@
           div.innerHTML = `
             <div class="flex justify-between">
               <span class="font-bold truncate max-w-[170px]">${nameToDisplay.toUpperCase()}</span>
-              <span>${d.subtotal.toFixed(2)} €</span>
+              <span>${d.subtotal.toFixed(2)} $</span>
             </div>
             <div class="text-[8px] text-slate-500 pl-2">
-              ${d.cantidad} UNID x ${d.precio_unitario.toFixed(2)} €
+              ${d.cantidad} UNID x ${d.precio_unitario.toFixed(2)} $
             </div>
           `;
           ticketBody.appendChild(div);
         });
       }
 
-      document.getElementById('ticket-total').textContent = `${p.total.toFixed(2)} €`;
+      document.getElementById('ticket-total').textContent = `${p.total.toFixed(2)} $`;
 
       // Save ID on print button
       document.getElementById('detail-modal').setAttribute('data-active-id', p.id);
@@ -2042,10 +2090,10 @@
           <div style="margin-bottom: 5px;">
             <div style="display: flex; justify-content: space-between;">
               <span style="font-weight: bold; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${nameToDisplay.toUpperCase()}</span>
-              <span>${d.subtotal.toFixed(2)} €</span>
+              <span>${d.subtotal.toFixed(2)} $</span>
             </div>
             <div style="font-size: 10px; color: #555; padding-left: 10px;">
-              ${d.text_qty_price || (d.cantidad + ' UNID x ' + d.precio_unitario.toFixed(2) + ' €')}
+              ${d.text_qty_price || (d.cantidad + ' UNID x ' + d.precio_unitario.toFixed(2) + ' $')}
             </div>
           </div>
         `;
@@ -2081,7 +2129,7 @@
         <div style="font-size: 11px; text-align: right; line-height: 1.4;">
           <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 900; border-top: 1px dashed #333; padding-top: 6px;">
             <span>TOTAL:</span>
-            <span>${p.total.toFixed(2)} €</span>
+            <span>${p.total.toFixed(2)} $</span>
           </div>
         </div>
 
@@ -2206,6 +2254,79 @@
           toast.remove();
         }, 300);
       }, 3500);
+    }
+
+    // Configuración de la Plantilla de Ticket
+    const DEFAULT_TICKET_CONFIG = {
+      slogan: "e confianza con productos de calida",
+      company: "res García",
+      nit: "7-101-0",
+      footer1: "¡GRACIAS POR SU PREFERENCIA!",
+      footer2: "Documento No Válido como Factura"
+    };
+
+    function loadTicketConfig() {
+      let config;
+      try {
+        const raw = localStorage.getItem('ticket_config');
+        config = raw ? JSON.parse(raw) : DEFAULT_TICKET_CONFIG;
+      } catch (e) {
+        config = DEFAULT_TICKET_CONFIG;
+      }
+      // Fill input fields in Sidebar
+      document.getElementById('config-slogan').value = config.slogan || '';
+      document.getElementById('config-company').value = config.company || '';
+      document.getElementById('config-nit').value = config.nit || '';
+      document.getElementById('config-footer1').value = config.footer1 || '';
+      document.getElementById('config-footer2').value = config.footer2 || '';
+
+      applyTicketConfig(config);
+    }
+
+    function saveAndApplyTicketConfig() {
+      const config = {
+        slogan: document.getElementById('config-slogan').value,
+        company: document.getElementById('config-company').value,
+        nit: document.getElementById('config-nit').value,
+        footer1: document.getElementById('config-footer1').value,
+        footer2: document.getElementById('config-footer2').value
+      };
+      localStorage.setItem('ticket_config', JSON.stringify(config));
+      applyTicketConfig(config);
+    }
+
+    function resetTicketConfigToDefault() {
+      localStorage.setItem('ticket_config', JSON.stringify(DEFAULT_TICKET_CONFIG));
+      loadTicketConfig();
+      showToast('Valores de plantilla restablecidos', 'info');
+    }
+
+    function applyTicketConfig(config) {
+      const c = config || DEFAULT_TICKET_CONFIG;
+
+      // Update form ticket preview
+      const formSlogan = document.getElementById('form-ticket-slogan');
+      if (formSlogan) formSlogan.textContent = c.slogan;
+      const formCompany = document.getElementById('form-ticket-company');
+      if (formCompany) formCompany.textContent = c.company;
+      const formNit = document.getElementById('form-ticket-nit');
+      if (formNit) formNit.textContent = c.nit;
+      const formFooter1 = document.getElementById('form-ticket-footer1');
+      if (formFooter1) formFooter1.textContent = c.footer1;
+      const formFooter2 = document.getElementById('form-ticket-footer2');
+      if (formFooter2) formFooter2.textContent = c.footer2;
+
+      // Update view ticket preview
+      const viewSlogan = document.getElementById('view-ticket-slogan');
+      if (viewSlogan) viewSlogan.textContent = c.slogan;
+      const viewCompany = document.getElementById('view-ticket-company');
+      if (viewCompany) viewCompany.textContent = c.company;
+      const viewNit = document.getElementById('view-ticket-nit');
+      if (viewNit) viewNit.textContent = c.nit;
+      const viewFooter1 = document.getElementById('view-ticket-footer1');
+      if (viewFooter1) viewFooter1.textContent = c.footer1;
+      const viewFooter2 = document.getElementById('view-ticket-footer2');
+      if (viewFooter2) viewFooter2.textContent = c.footer2;
     }
   </script>
 </body>

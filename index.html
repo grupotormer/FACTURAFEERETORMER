@@ -1268,8 +1268,8 @@
         lsSet(LS_KEYS.preventa, preventasNuevas);
 
         const detallesNuevos = (Array.isArray(detallesAS) ? detallesAS : []).map(d => {
-          const cantidad = parseInt(d.CANTIDAD || d.cantidad) || 0;
-          const precio = parseFloat(d.PRECIO || d.precio) || 0;
+          const cantidad = parseFloat(d.CANTIDAD || d.cantidad) || 0.0;
+          const precio = parseFloat(d.PRECIO || d.precio) || 0.0;
           return {
             id: d.IDDETALLE || d.iddetalle || d.id || '',
             preventa_id: d.IDTransaccion || d.idtransaccion || d.preventa_id || '',
@@ -1684,8 +1684,8 @@
           const priceInput = row.querySelector('input[type="number"][step="0.01"]');
           if (priceInput) priceInput.value = exactMatch.precio;
 
-          const qtyInput = row.querySelector('input[type="number"][min="1"]');
-          const qty = qtyInput ? (parseInt(qtyInput.value) || 1) : 1;
+          const qtyInput = row.querySelector('input[oninput*="cantidad"]');
+          const qty = qtyInput ? (parseFloat(qtyInput.value) || 1.0) : 1.0;
           const subEl = document.getElementById(`form-subtotal-${rowIndex}`);
           if (subEl) subEl.textContent = `${(qty * exactMatch.precio).toFixed(2)} $`;
         }
@@ -1744,8 +1744,8 @@
           priceInput.value = matched.precio;
         }
 
-        const qtyInput = row.querySelector('input[type="number"][min="1"]');
-        const qty = qtyInput ? (parseInt(qtyInput.value) || 1) : 1;
+        const qtyInput = row.querySelector('input[oninput*="cantidad"]');
+        const qty = qtyInput ? (parseFloat(qtyInput.value) || 1.0) : 1.0;
         const sub = (qty * matched.precio).toFixed(2);
         const subEl = document.getElementById(`form-subtotal-${rowIndex}`);
         if (subEl) {
@@ -1859,6 +1859,7 @@
         
         // Formulate items count string
         const itemsCount = p.detalles ? p.detalles.reduce((sum, item) => sum + item.cantidad, 0) : 0;
+        const formattedItemsCount = Number(itemsCount.toFixed(3));
         const itemsDistinct = p.detalles ? p.detalles.length : 0;
 
         // Status Badge Style
@@ -1878,7 +1879,7 @@
           <td class="py-3 px-6 text-slate-300 font-medium">${p.fecha}</td>
           <td class="py-3 px-6">
             <span class="bg-slate-700 text-slate-300 text-xs px-2.5 py-0.5 rounded-full font-semibold">
-              ${itemsCount} u. <span class="text-[10px] text-slate-400">(${itemsDistinct} ref)</span>
+              ${formattedItemsCount} u. <span class="text-[10px] text-slate-400">(${itemsDistinct} ref)</span>
             </span>
           </td>
           <td class="py-3 px-6 text-right font-black text-emerald-400 font-mono text-base">${p.total.toFixed(2)} $</td>
@@ -1942,7 +1943,7 @@
           </div>
         </td>
         <td class="py-2 px-3">
-          <input type="number" value="${cantidad}" min="1" step="1" oninput="updateFormItem(${rowIndex}, 'cantidad', this.value)" required class="w-full text-center px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
+          <input type="number" value="${cantidad}" min="0.001" step="any" oninput="updateFormItem(${rowIndex}, 'cantidad', this.value)" required class="w-full text-center px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
         </td>
         <td class="py-2 px-3">
           <div class="relative">
@@ -1991,7 +1992,7 @@
       if (key === 'producto') {
         formItems[index].producto = value;
       } else if (key === 'cantidad') {
-        formItems[index].cantidad = parseInt(value) || 0;
+        formItems[index].cantidad = parseFloat(value) || 0.0;
       } else if (key === 'precio_unitario') {
         formItems[index].precio_unitario = parseFloat(value) || 0.0;
       }
@@ -2046,7 +2047,7 @@
             <span>${subtotal.toFixed(2)} $</span>
           </div>
           <div class="text-[8px] text-slate-500 pl-2">
-            ${item.cantidad} UNID x ${item.precio_unitario.toFixed(2)} $
+            ${Number(item.cantidad.toFixed(3))} UNID x ${item.precio_unitario.toFixed(2)} $
           </div>
         `;
         container.appendChild(div);
@@ -2434,7 +2435,7 @@
           tr.className = "hover:bg-slate-800/20 transition-colors";
           tr.innerHTML = `
             <td class="py-2.5 px-4 text-slate-200 font-semibold">${d.producto}</td>
-            <td class="py-2.5 px-3 text-center text-slate-300 font-mono">${d.cantidad} u.</td>
+            <td class="py-2.5 px-3 text-center text-slate-300 font-mono">${Number(d.cantidad.toFixed(3))} u.</td>
             <td class="py-2.5 px-3 text-right text-slate-400 font-mono">${d.precio_unitario.toFixed(2)} $</td>
             <td class="py-2.5 px-4 text-right font-black text-emerald-400 font-mono">${d.subtotal.toFixed(2)} $</td>
           `;
@@ -2464,7 +2465,7 @@
               <span>${d.subtotal.toFixed(2)} $</span>
             </div>
             <div class="text-[8px] text-slate-500 pl-2">
-              ${d.cantidad} UNID x ${d.precio_unitario.toFixed(2)} $
+              ${Number(d.cantidad.toFixed(3))} UNID x ${d.precio_unitario.toFixed(2)} $
             </div>
           `;
           ticketBody.appendChild(div);
@@ -2528,7 +2529,7 @@
               <span>${d.subtotal.toFixed(2)} $</span>
             </div>
             <div style="font-size: 10px; color: #555; padding-left: 10px;">
-              ${d.text_qty_price || (d.cantidad + ' UNID x ' + d.precio_unitario.toFixed(2) + ' $')}
+              ${d.text_qty_price || (Number(d.cantidad.toFixed(3)) + ' UNID x ' + d.precio_unitario.toFixed(2) + ' $')}
             </div>
           </div>
         `;

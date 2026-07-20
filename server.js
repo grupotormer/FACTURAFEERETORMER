@@ -36,7 +36,7 @@ db.exec(`
     id TEXT PRIMARY KEY,
     preventa_id TEXT NOT NULL,
     producto TEXT NOT NULL,
-    cantidad INTEGER NOT NULL DEFAULT 1,
+    cantidad REAL NOT NULL DEFAULT 1.0,
     precio_unitario REAL NOT NULL DEFAULT 0.0,
     subtotal REAL NOT NULL DEFAULT 0.0,
     FOREIGN KEY (preventa_id) REFERENCES Preventa(id) ON DELETE CASCADE
@@ -312,7 +312,7 @@ async function syncFromAppSheetToSQLite() {
           const iddetalle = d.IDDETALLE || d.iddetalle || d.id || '';
           const idtransaccion = d.IDTransaccion || d.idtransaccion || d.preventa_id || '';
           const articulo = d.ARTICULO || d.articulo || d.producto || '';
-          const cantidadVal = parseInt(d.CANTIDAD || d.cantidad) || 0;
+          const cantidadVal = parseFloat(d.CANTIDAD || d.cantidad) || 0.0;
           const precioVal = parseFloat(d.PRECIO || d.precio || d.precio_unitario) || 0.0;
           const subtotalVal = parseFloat(d['TOTAL LINEA'] || d.total_linea || d.subtotal) || (cantidadVal * precioVal);
 
@@ -491,8 +491,8 @@ app.post('/api/preventas', async (req, res) => {
   try {
     // Calculate total from details to ensure correctness
     const totalCalculado = detalles.reduce((sum, item) => {
-      const qty = parseInt(item.cantidad) || 0;
-      const price = parseFloat(item.precio_unitario) || 0;
+      const qty = parseFloat(item.cantidad) || 0.0;
+      const price = parseFloat(item.precio_unitario) || 0.0;
       return sum + (qty * price);
     }, 0);
 
@@ -614,8 +614,8 @@ app.put('/api/preventas/:id', async (req, res) => {
     }
 
     const totalCalculado = detalles.reduce((sum, item) => {
-      const qty = parseInt(item.cantidad) || 0;
-      const price = parseFloat(item.precio_unitario) || 0;
+      const qty = parseFloat(item.cantidad) || 0.0;
+      const price = parseFloat(item.precio_unitario) || 0.0;
       return sum + (qty * price);
     }, 0);
 

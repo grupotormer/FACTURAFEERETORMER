@@ -43,6 +43,11 @@ def run_verification(page):
   page.locator("#product-options-0 >> text=PRI-000233").click()
   page.wait_for_timeout(300)
 
+  # Fill decimal quantity
+  print("7b. Filling decimal quantity...")
+  page.locator("#form-row-0 input[oninput*='cantidad']").fill("1.5")
+  page.wait_for_timeout(300)
+
   # Check that price is populated
   price_val = page.locator("#form-row-0 input[type='number'][step='0.01']").input_value()
   print(f"-> Selected product price: {price_val} $")

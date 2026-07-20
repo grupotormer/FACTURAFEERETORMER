@@ -1765,6 +1765,48 @@
     // Fetch all preventas (intenta sincronizar con AppSheet, luego pinta desde caché local)
     async function fetchPreventas() {
       try {
+        const response = await fetch('/api/preventas');
+        if (response.ok) {
+          const data = await response.json();
+          // Update localStorage cache to match
+          const preventasLocal = [];
+          const detallesLocal = [];
+          data.forEach(p => {
+            preventasLocal.push({
+              id: p.id,
+              cliente: p.cliente,
+              telefono: p.telefono,
+              fecha: p.fecha,
+              total: p.total,
+              estado: p.estado,
+              notas: p.notas
+            });
+            if (p.detalles && Array.isArray(p.detalles)) {
+              p.detalles.forEach(d => {
+                detallesLocal.push({
+                  id: d.id,
+                  preventa_id: d.preventa_id,
+                  producto: d.producto,
+                  cantidad: d.cantidad,
+                  precio_unitario: d.precio_unitario,
+                  subtotal: d.subtotal
+                });
+              });
+            }
+          });
+          lsSet(LS_KEYS.preventa, preventasLocal);
+          lsSet(LS_KEYS.detalle, detallesLocal);
+
+          preventas = data.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '') || String(b.id).localeCompare(String(a.id)));
+          calculateStats();
+          filterAndRender();
+          return;
+        }
+      } catch (err) {
+        console.warn("No se pudo obtener preventas del backend, usando caché local:", err.message);
+      }
+
+      try {
         await syncFromAppSheetToLocal();
       } catch (err) {
         console.warn("No se pudo sincronizar con AppSheet, usando caché local:", err.message);
@@ -2150,130 +2192,166 @@
       };
 
       try {
-        const preventasLocal = lsGet(LS_KEYS.preventa);
-        const detallesLocal = lsGet(LS_KEYS.detalle);
-        const totalCalculado = filteredDetails.reduce((sum, it) => sum + (parseFloat(it.cantidad) || 0) * (parseFloat(it.precio_unitario) || 0), 0);
-
-        let savedId = id;
-
+        // Intentar guardar primero mediante la API del servidor local
+        let response;
         if (id) {
-          // Editar
-          const idx = preventasLocal.findIndex(p => p.id === id);
-          if (idx === -1) throw new Error('Preventa no encontrada en la caché local');
-          preventasLocal[idx] = { ...preventasLocal[idx], cliente, telefono, fecha, estado, notas, total: totalCalculado };
-
-          const oldDetails = detallesLocal.filter(d => d.preventa_id === id);
-          const remaining = detallesLocal.filter(d => d.preventa_id !== id);
-          const newDetalles = filteredDetails.map(item => ({
-            id: 'det-' + Math.random().toString(36).substring(2, 10),
-            preventa_id: id,
-            producto: item.producto,
-            cantidad: parseFloat(item.cantidad) || 0,
-            precio_unitario: parseFloat(item.precio_unitario) || 0,
-            subtotal: (parseFloat(item.cantidad) || 0) * (parseFloat(item.precio_unitario) || 0)
-          }));
-
-          lsSet(LS_KEYS.detalle, [...remaining, ...newDetalles]);
-          lsSet(LS_KEYS.preventa, preventasLocal);
-
-          // Propagar a AppSheet (no bloqueante: si falla, el cambio ya quedó local)
-          await callAppSheetAPI("Preventa", "Edit", [{
-            IDTransacion: id, IDcliente: cliente, NombreDelCliente: cliente, FECHA: fecha,
-            total: String(totalCalculado), Estado: estado || 'Pendiente', Notas: notas || ''
-          }]).catch(err => console.error("AppSheet Edit Preventa falló:", err));
-
-          if (oldDetails.length > 0) {
-            await callAppSheetAPI("DETALLE_PREVENTA", "Delete", oldDetails.map(d => ({ IDDETALLE: String(d.id) })))
-              .catch(err => console.error("AppSheet Delete detalles falló:", err));
-          }
-
-          const nowPut = new Date();
-          const formattedDateTimePut = `${String(nowPut.getDate()).padStart(2, '0')}/${String(nowPut.getMonth()+1).padStart(2, '0')}/${nowPut.getFullYear()} ${String(nowPut.getHours()).padStart(2, '0')}:${String(nowPut.getMinutes()).padStart(2, '0')}:${String(nowPut.getSeconds()).padStart(2, '0')}`;
-
-          const dRows = newDetalles.map(item => ({
-            IDDETALLE: String(item.id), IDTransaccion: id, ARTICULO: item.producto,
-            CANTIDAD: String(item.cantidad), PRECIO: String(item.precio_unitario),
-            'TOTAL LINEA': String(item.subtotal),
-            FechaYHora: formattedDateTimePut,
-            pdf: `${item.id}.pdf`,
-            pdf_Bytes: "JVBERi0xLjQKJSAgIiB0ZXN0IGZpbGUgZm9yIGp1bGVz",
-            Cliente: cliente,
-            NombreDelCliente: cliente
-          }));
-          await callAppSheetAPI("DETALLE_PREVENTA", "Add", dRows).catch(err => console.error("AppSheet Add detalles falló:", err));
+          response = await fetch(`/api/preventas/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
         } else {
-          // Crear and respect the correlative structure "2026-01-M1P505-"
-          const prefix = "2026-01-M1P505-";
-          let maxNum = 0;
-          for (const p of preventasLocal) {
-            if (p.id && p.id.startsWith(prefix)) {
-              const suffix = p.id.substring(prefix.length);
-              const num = parseInt(suffix, 10);
-              if (!isNaN(num) && num > maxNum) {
-                maxNum = num;
+          response = await fetch('/api/preventas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        }
+
+        if (response.ok) {
+          const savedPreventa = await response.json();
+          let savedId = savedPreventa.id;
+
+          showToast(id ? 'Preventa actualizada correctamente' : 'Nueva preventa guardada', 'success');
+
+          // Refrescar lista y caché desde el servidor
+          await fetchPreventas();
+
+          closeFormModal();
+
+          if (printAfterSave && savedId) {
+            setTimeout(() => {
+              triggerPrint(savedId);
+            }, 300);
+          }
+          return; // Finalizar con éxito
+        } else {
+          const errData = await response.json();
+          throw new Error(errData.error || 'Error en el servidor backend.');
+        }
+      } catch (serverErr) {
+        console.warn("Error al guardar en el servidor backend, usando fallback local y directo a AppSheet:", serverErr.message);
+
+        // FALLBACK: Guardado local directo en localStorage + AppSheet API (flujo 100% frontend)
+        try {
+          const preventasLocal = lsGet(LS_KEYS.preventa);
+          const detallesLocal = lsGet(LS_KEYS.detalle);
+          const totalCalculado = filteredDetails.reduce((sum, it) => sum + (parseFloat(it.cantidad) || 0) * (parseFloat(it.precio_unitario) || 0), 0);
+
+          let savedId = id;
+
+          if (id) {
+            // Editar local
+            const idx = preventasLocal.findIndex(p => p.id === id);
+            if (idx === -1) throw new Error('Preventa no encontrada en la caché local');
+            preventasLocal[idx] = { ...preventasLocal[idx], cliente, telefono, fecha, estado, notas, total: totalCalculado };
+
+            const oldDetails = detallesLocal.filter(d => d.preventa_id === id);
+            const remaining = detallesLocal.filter(d => d.preventa_id !== id);
+            const newDetalles = filteredDetails.map(item => ({
+              id: 'det-' + Math.random().toString(36).substring(2, 10),
+              preventa_id: id,
+              producto: item.producto,
+              cantidad: parseFloat(item.cantidad) || 0,
+              precio_unitario: parseFloat(item.precio_unitario) || 0,
+              subtotal: (parseFloat(item.cantidad) || 0) * (parseFloat(item.precio_unitario) || 0)
+            }));
+
+            lsSet(LS_KEYS.detalle, [...remaining, ...newDetalles]);
+            lsSet(LS_KEYS.preventa, preventasLocal);
+
+            // Propagar a AppSheet (no bloqueante)
+            await callAppSheetAPI("Preventa", "Edit", [{
+              IDTransacion: id, IDcliente: cliente, NombreDelCliente: cliente, FECHA: fecha,
+              total: String(totalCalculado), Estado: estado || 'Pendiente', Notas: notas || ''
+            }]).catch(err => console.error("AppSheet Edit Preventa falló:", err));
+
+            if (oldDetails.length > 0) {
+              await callAppSheetAPI("DETALLE_PREVENTA", "Delete", oldDetails.map(d => ({ IDDETALLE: String(d.id) })))
+                .catch(err => console.error("AppSheet Delete detalles falló:", err));
+            }
+
+            const nowPut = new Date();
+            const formattedDateTimePut = `${String(nowPut.getDate()).padStart(2, '0')}/${String(nowPut.getMonth()+1).padStart(2, '0')}/${nowPut.getFullYear()} ${String(nowPut.getHours()).padStart(2, '0')}:${String(nowPut.getMinutes()).padStart(2, '0')}:${String(nowPut.getSeconds()).padStart(2, '0')}`;
+
+            const dRows = newDetalles.map(item => ({
+              IDDETALLE: String(item.id), IDTransaccion: id, ARTICULO: item.producto,
+              CANTIDAD: String(item.cantidad), PRECIO: String(item.precio_unitario),
+              'TOTAL LINEA': String(item.subtotal),
+              FechaYHora: formattedDateTimePut,
+              pdf: `${item.id}.pdf`,
+              pdf_Bytes: "JVBERi0xLjQKJSAgIiB0ZXN0IGZpbGUgZm9yIGp1bGVz",
+              Cliente: cliente,
+              NombreDelCliente: cliente
+            }));
+            await callAppSheetAPI("DETALLE_PREVENTA", "Add", dRows).catch(err => console.error("AppSheet Add detalles falló:", err));
+          } else {
+            // Crear local
+            const prefix = "2026-01-M1P505-";
+            let maxNum = 0;
+            for (const p of preventasLocal) {
+              if (p.id && p.id.startsWith(prefix)) {
+                const suffix = p.id.substring(prefix.length);
+                const num = parseInt(suffix, 10);
+                if (!isNaN(num) && num > maxNum) {
+                  maxNum = num;
+                }
               }
             }
+            if (maxNum === 0) {
+              maxNum = 331; // fallback default
+            }
+            const newId = prefix + (maxNum + 1);
+            savedId = newId;
+
+            const newPreventa = { id: newId, cliente, telefono, fecha, total: totalCalculado, estado: estado || 'Pendiente', notas };
+            const newDetalles = filteredDetails.map(item => ({
+              id: 'det-' + Math.random().toString(36).substring(2, 10),
+              preventa_id: newId,
+              producto: item.producto,
+              cantidad: parseFloat(item.cantidad) || 0,
+              precio_unitario: parseFloat(item.precio_unitario) || 0,
+              subtotal: (parseFloat(item.cantidad) || 0) * (parseFloat(item.precio_unitario) || 0)
+            }));
+
+            lsSet(LS_KEYS.preventa, [...preventasLocal, newPreventa]);
+            lsSet(LS_KEYS.detalle, [...detallesLocal, ...newDetalles]);
+
+            await callAppSheetAPI("Preventa", "Add", [{
+              IDTransacion: newId, IDcliente: cliente, NombreDelCliente: cliente, FECHA: fecha,
+              total: String(totalCalculado), Estado: estado || 'Pendiente', Notas: notas || ''
+            }]).catch(err => console.error("AppSheet Add Preventa falló:", err));
+
+            const nowAdd = new Date();
+            const formattedDateTimeAdd = `${String(nowAdd.getDate()).padStart(2, '0')}/${String(nowAdd.getMonth()+1).padStart(2, '0')}/${nowAdd.getFullYear()} ${String(nowAdd.getHours()).padStart(2, '0')}:${String(nowAdd.getMinutes()).padStart(2, '0')}:${String(nowAdd.getSeconds()).padStart(2, '0')}`;
+
+            const dRows = newDetalles.map(item => ({
+              IDDETALLE: String(item.id), IDTransaccion: newId, ARTICULO: item.producto,
+              CANTIDAD: String(item.cantidad), PRECIO: String(item.precio_unitario),
+              'TOTAL LINEA': String(item.subtotal),
+              FechaYHora: formattedDateTimeAdd,
+              pdf: `${item.id}.pdf`,
+              pdf_Bytes: "JVBERi0xLjQKJSAgIiB0ZXN0IGZpbGUgZm9yIGp1bGVz",
+              Cliente: cliente,
+              NombreDelCliente: cliente
+            }));
+            await callAppSheetAPI("DETALLE_PREVENTA", "Add", dRows).catch(err => console.error("AppSheet Add detalles falló:", err));
           }
-          if (maxNum === 0) {
-            maxNum = 331; // fallback default
+
+          showToast(id ? 'Preventa actualizada localmente' : 'Nueva preventa guardada localmente', 'success');
+          renderFromLocalCache();
+          closeFormModal();
+          triggerMockSheetSync();
+
+          if (printAfterSave && savedId) {
+            setTimeout(() => {
+              triggerPrint(savedId);
+            }, 300);
           }
-          const newId = prefix + (maxNum + 1);
-          savedId = newId;
-
-          const newPreventa = { id: newId, cliente, telefono, fecha, total: totalCalculado, estado: estado || 'Pendiente', notas };
-          const newDetalles = filteredDetails.map(item => ({
-            id: 'det-' + Math.random().toString(36).substring(2, 10),
-            preventa_id: newId,
-            producto: item.producto,
-            cantidad: parseFloat(item.cantidad) || 0,
-            precio_unitario: parseFloat(item.precio_unitario) || 0,
-            subtotal: (parseFloat(item.cantidad) || 0) * (parseFloat(item.precio_unitario) || 0)
-          }));
-
-          lsSet(LS_KEYS.preventa, [...preventasLocal, newPreventa]);
-          lsSet(LS_KEYS.detalle, [...detallesLocal, ...newDetalles]);
-
-          await callAppSheetAPI("Preventa", "Add", [{
-            IDTransacion: newId, IDcliente: cliente, NombreDelCliente: cliente, FECHA: fecha,
-            total: String(totalCalculado), Estado: estado || 'Pendiente', Notas: notas || ''
-          }]).catch(err => console.error("AppSheet Add Preventa falló:", err));
-
-          const nowAdd = new Date();
-          const formattedDateTimeAdd = `${String(nowAdd.getDate()).padStart(2, '0')}/${String(nowAdd.getMonth()+1).padStart(2, '0')}/${nowAdd.getFullYear()} ${String(nowAdd.getHours()).padStart(2, '0')}:${String(nowAdd.getMinutes()).padStart(2, '0')}:${String(nowAdd.getSeconds()).padStart(2, '0')}`;
-
-          const dRows = newDetalles.map(item => ({
-            IDDETALLE: String(item.id), IDTransaccion: newId, ARTICULO: item.producto,
-            CANTIDAD: String(item.cantidad), PRECIO: String(item.precio_unitario),
-            'TOTAL LINEA': String(item.subtotal),
-            FechaYHora: formattedDateTimeAdd,
-            pdf: `${item.id}.pdf`,
-            pdf_Bytes: "JVBERi0xLjQKJSAgIiB0ZXN0IGZpbGUgZm9yIGp1bGVz",
-            Cliente: cliente,
-            NombreDelCliente: cliente
-          }));
-          await callAppSheetAPI("DETALLE_PREVENTA", "Add", dRows).catch(err => console.error("AppSheet Add detalles falló:", err));
+        } catch (localErr) {
+          console.error(localErr);
+          showToast("Error al guardar localmente: " + localErr.message, 'error');
         }
-
-        showToast(id ? 'Preventa actualizada correctamente' : 'Nueva preventa guardada', 'success');
-        
-        // Refresh data
-        renderFromLocalCache();
-        
-        // Close modal
-        closeFormModal();
-        
-        // Mock sheets webhook trigger as well
-        triggerMockSheetSync();
-
-        // Print ticket simultaneously if user requested "Guardar e Imprimir"
-        if (printAfterSave && savedId) {
-          setTimeout(() => {
-            triggerPrint(savedId);
-          }, 300);
-        }
-      } catch (err) {
-        console.error(err);
-        showToast(err.message, 'error');
       }
     }
 
@@ -2281,26 +2359,45 @@
     async function confirmDelete(id, name) {
       if (confirm(`¿Está seguro de eliminar la preventa de "${name}"? Se borrarán todos los detalles asociados en cascada.`)) {
         try {
-          const preventasLocal = lsGet(LS_KEYS.preventa);
-          const detallesLocal = lsGet(LS_KEYS.detalle);
-          const oldDetails = detallesLocal.filter(d => d.preventa_id === id);
+          // Intentar eliminar primero mediante la API del servidor
+          const response = await fetch(`/api/preventas/${id}`, {
+            method: 'DELETE'
+          });
 
-          lsSet(LS_KEYS.preventa, preventasLocal.filter(p => p.id !== id));
-          lsSet(LS_KEYS.detalle, detallesLocal.filter(d => d.preventa_id !== id));
-
-          if (oldDetails.length > 0) {
-            await callAppSheetAPI("DETALLE_PREVENTA", "Delete", oldDetails.map(d => ({ IDDETALLE: String(d.id) })))
-              .catch(err => console.error("AppSheet Delete detalles falló:", err));
+          if (response.ok) {
+            showToast('Preventa eliminada con éxito', 'success');
+            await fetchPreventas();
+            return;
+          } else {
+            const errData = await response.json();
+            throw new Error(errData.error || 'Error al eliminar en el servidor backend.');
           }
-          await callAppSheetAPI("Preventa", "Delete", [{ IDTransacion: String(id) }])
-            .catch(err => console.error("AppSheet Delete Preventa falló:", err));
+        } catch (serverErr) {
+          console.warn("Error al eliminar en el servidor backend, usando fallback local:", serverErr.message);
 
-          showToast('Preventa eliminada con éxito', 'success');
-          renderFromLocalCache();
-          triggerMockSheetSync();
-        } catch (err) {
-          console.error(err);
-          showToast(err.message, 'error');
+          // FALLBACK local y directo a AppSheet
+          try {
+            const preventasLocal = lsGet(LS_KEYS.preventa);
+            const detallesLocal = lsGet(LS_KEYS.detalle);
+            const oldDetails = detallesLocal.filter(d => d.preventa_id === id);
+
+            lsSet(LS_KEYS.preventa, preventasLocal.filter(p => p.id !== id));
+            lsSet(LS_KEYS.detalle, detallesLocal.filter(d => d.preventa_id !== id));
+
+            if (oldDetails.length > 0) {
+              await callAppSheetAPI("DETALLE_PREVENTA", "Delete", oldDetails.map(d => ({ IDDETALLE: String(d.id) })))
+                .catch(err => console.error("AppSheet Delete detalles falló:", err));
+            }
+            await callAppSheetAPI("Preventa", "Delete", [{ IDTransacion: String(id) }])
+              .catch(err => console.error("AppSheet Delete Preventa falló:", err));
+
+            showToast('Preventa eliminada con éxito (local)', 'success');
+            renderFromLocalCache();
+            triggerMockSheetSync();
+          } catch (localErr) {
+            console.error(localErr);
+            showToast("Error al eliminar localmente: " + localErr.message, 'error');
+          }
         }
       }
     }
@@ -2507,21 +2604,44 @@
       showToast('Contactando servidores de App Sheep (AppSheet)...', 'info');
 
       try {
-        await syncFromAppSheetToLocal();
+        // Intentar sincronizar a través del backend local
+        const response = await fetch('/api/appsheet-sync', {
+          method: 'POST'
+        });
 
-        setTimeout(() => {
-          syncIcon.classList.remove('animate-spin');
-          updateAppSheetSyncTime();
-          showToast('Sincronización de base de datos bidireccional exitosa', 'success');
-          // Refresh clients and products after full sync
-          fetchClientesAndProductos();
-          renderFromLocalCache();
-        }, 1200);
-
+        if (response.ok) {
+          setTimeout(async () => {
+            syncIcon.classList.remove('animate-spin');
+            updateAppSheetSyncTime();
+            showToast('Sincronización de base de datos bidireccional exitosa', 'success');
+            // Refrescar datos locales del backend
+            await fetchClientesAndProductos();
+            await fetchPreventas();
+          }, 1200);
+          return;
+        } else {
+          throw new Error('Error de respuesta en el backend.');
+        }
       } catch (err) {
-        console.error(err);
-        syncIcon.classList.remove('animate-spin');
-        showToast('No se pudo contactar AppSheet, usando caché local', 'error');
+        console.warn("No se pudo contactar con el backend para sincronizar, usando flujo directo frontend:", err.message);
+
+        // FALLBACK: Sincronización directa desde el frontend
+        try {
+          await syncFromAppSheetToLocal();
+
+          setTimeout(() => {
+            syncIcon.classList.remove('animate-spin');
+            updateAppSheetSyncTime();
+            showToast('Sincronización de base de datos bidireccional exitosa (local)', 'success');
+            // Refresh clients and products after full sync
+            fetchClientesAndProductos();
+            renderFromLocalCache();
+          }, 1200);
+        } catch (localErr) {
+          console.error(localErr);
+          syncIcon.classList.remove('animate-spin');
+          showToast('No se pudo contactar AppSheet ni el backend', 'error');
+        }
       }
     }
 

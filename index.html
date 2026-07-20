@@ -83,6 +83,22 @@
     #print-ticket-area {
       display: none;
     }
+
+    /* Collapsed sidebar styles */
+    .sidebar-collapsed {
+      width: 5.5rem !important; /* 88px */
+    }
+    .sidebar-collapsed .sidebar-text {
+      display: none !important;
+    }
+    .sidebar-collapsed .sidebar-header-text {
+      display: none !important;
+    }
+    .sidebar-collapsed nav button {
+      justify-content: center !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+    }
   </style>
 </head>
 <body class="h-full font-sans antialiased">
@@ -138,48 +154,44 @@
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col lg:flex-row gap-8">
       
       <!-- Sidebar (no-print) -->
-      <aside class="w-full lg:w-80 flex-shrink-0 space-y-6 no-print">
+      <aside id="app-sidebar" class="w-full lg:w-80 flex-shrink-0 space-y-6 no-print transition-all duration-300">
         <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl p-6">
-          <div class="flex items-center gap-2 mb-4">
-            <i data-lucide="settings" class="text-emerald-400 w-5 h-5"></i>
-            <h3 class="text-base font-bold text-white">Editar Plantilla</h3>
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-2">
+              <i data-lucide="menu" class="text-emerald-400 w-5 h-5"></i>
+              <h3 class="text-base font-bold text-white sidebar-header-text">Navegación</h3>
+            </div>
+            <button onclick="toggleSidebar()" id="sidebar-toggle-btn" class="p-1.5 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors" title="Contraer / Expandir Sidebar">
+              <i data-lucide="chevron-left" class="w-4 h-4" id="sidebar-toggle-icon"></i>
+            </button>
           </div>
-          <p class="text-xs text-slate-400 mb-4">Actualice en tiempo real los datos fijos del ticket de impresión y previsualización.</p>
 
-          <div class="space-y-4">
-            <div>
-              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Slogan / Línea 1</label>
-              <input type="text" id="config-slogan" oninput="saveAndApplyTicketConfig()" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
-            </div>
-            <div>
-              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Nombre de Empresa</label>
-              <input type="text" id="config-company" oninput="saveAndApplyTicketConfig()" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
-            </div>
-            <div>
-              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">NIT / ID Empresa</label>
-              <input type="text" id="config-nit" oninput="saveAndApplyTicketConfig()" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
-            </div>
-            <div>
-              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Pie de Página (Línea 1)</label>
-              <input type="text" id="config-footer1" oninput="saveAndApplyTicketConfig()" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
-            </div>
-            <div>
-              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Pie de Página (Línea 2)</label>
-              <input type="text" id="config-footer2" oninput="saveAndApplyTicketConfig()" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
-            </div>
-
-            <div class="pt-4 border-t border-slate-700">
-              <button onclick="resetTicketConfigToDefault()" class="w-full py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-300 hover:text-white rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5">
-                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-                Restablecer Valores
-              </button>
-            </div>
-          </div>
+          <nav class="space-y-2">
+            <button onclick="switchTab('preventas')" id="nav-btn-preventas" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all bg-emerald-600 text-white shadow-lg shadow-emerald-600/10">
+              <i data-lucide="shopping-bag" class="w-5 h-5 flex-shrink-0"></i>
+              <span class="sidebar-text">PREVENTAS</span>
+            </button>
+            <button onclick="switchTab('template')" id="nav-btn-template" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-slate-300 hover:text-white hover:bg-slate-700/50 border border-transparent">
+              <i data-lucide="receipt" class="w-5 h-5 flex-shrink-0"></i>
+              <span class="sidebar-text">Témplate de ticket</span>
+            </button>
+            <button onclick="switchTab('productos')" id="nav-btn-productos" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-slate-300 hover:text-white hover:bg-slate-700/50 border border-transparent">
+              <i data-lucide="package" class="w-5 h-5 flex-shrink-0"></i>
+              <span class="sidebar-text">pruductos</span>
+            </button>
+            <button onclick="switchTab('clientes')" id="nav-btn-clientes" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-slate-300 hover:text-white hover:bg-slate-700/50 border border-transparent">
+              <i data-lucide="users" class="w-5 h-5 flex-shrink-0"></i>
+              <span class="sidebar-text">clientes</span>
+            </button>
+          </nav>
         </div>
       </aside>
 
       <!-- Main Content Block -->
       <div class="flex-1 min-w-0 space-y-8">
+
+        <!-- Tab 1: PREVENTAS -->
+        <div id="tab-view-preventas" class="space-y-8">
 
         <!-- Statistics Dashboard Row -->
       <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
@@ -261,7 +273,7 @@
             <!-- Search bar -->
             <div class="relative min-w-[200px] md:min-w-[240px]">
               <i data-lucide="search" class="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-400"></i>
-              <input type="text" id="search-input" onkeyup="filterAndRender()" placeholder="Buscar cliente..." class="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+              <input type="text" id="search-input" list="clientes-list" onkeyup="filterAndRender()" placeholder="Buscar cliente..." class="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
             </div>
 
             <!-- Filter select -->
@@ -365,6 +377,209 @@
         </div>
       </section>
 
+        </div> <!-- End of Tab 1: PREVENTAS -->
+
+        <!-- Tab 2: Témplate de ticket -->
+        <div id="tab-view-template" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <!-- Editor inputs (7/12) -->
+          <div class="lg:col-span-7 bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl p-6 space-y-6">
+            <div class="flex items-center gap-2 mb-4">
+              <i data-lucide="settings" class="text-emerald-400 w-5 h-5"></i>
+              <h3 class="text-base font-bold text-white">Editar Plantilla de Ticket</h3>
+            </div>
+            <p class="text-xs text-slate-400">Actualice en tiempo real los datos fijos del ticket de impresión y previsualización física.</p>
+
+            <div class="space-y-4">
+              <div>
+                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Slogan / Línea 1</label>
+                <input type="text" id="config-slogan" oninput="saveAndApplyTicketConfig()" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Nombre de Empresa</label>
+                <input type="text" id="config-company" oninput="saveAndApplyTicketConfig()" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">NIT / ID Empresa</label>
+                <input type="text" id="config-nit" oninput="saveAndApplyTicketConfig()" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Pie de Página (Línea 1)</label>
+                <input type="text" id="config-footer1" oninput="saveAndApplyTicketConfig()" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Pie de Página (Línea 2)</label>
+                <input type="text" id="config-footer2" oninput="saveAndApplyTicketConfig()" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all">
+              </div>
+
+              <div class="pt-4 border-t border-slate-700 flex gap-3">
+                <button onclick="resetTicketConfigToDefault()" class="flex-1 py-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5">
+                  <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                  Restablecer Valores por Defecto
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ticket digital template preview (5/12) -->
+          <div class="lg:col-span-5 bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-2xl flex flex-col items-center">
+            <div class="w-full flex items-center justify-between mb-4 text-xs">
+              <span class="font-bold text-slate-300 uppercase tracking-wide flex items-center gap-1">
+                <i data-lucide="eye" class="w-4 h-4 text-emerald-400"></i>
+                Vista de Plantilla Fija (80mm)
+              </span>
+              <span class="bg-slate-900 text-slate-400 px-2 py-0.5 rounded text-[10px]">Previsualización</span>
+            </div>
+
+            <!-- Pre-populated preview card mimicking real ticket -->
+            <div class="bg-white text-slate-900 p-6 rounded shadow-inner w-full max-w-[280px] font-mono text-xs border border-slate-300 leading-tight select-none pointer-events-none">
+              <div class="text-center space-y-1 mb-4">
+                <img src="Logoferre.png" alt="Logo" class="mx-auto h-12 object-contain mb-2">
+                <p id="preview-tab-slogan" class="text-[10px] text-slate-700">e confianza con productos de calida</p>
+                <h4 id="preview-tab-company" class="font-bold text-xs tracking-wide">res García</h4>
+                <p id="preview-tab-nit" class="text-[10px] text-slate-700">7-101-0</p>
+              </div>
+
+              <div class="space-y-1 text-[10px] mb-3">
+                <p><strong>FECHA:</strong> <span>2026-01-20</span></p>
+                <p><strong>TICKET:</strong> #00332</p>
+                <p><strong>CLIENTE:</strong> JUAN PÉREZ</p>
+                <p><strong>TELF:</strong> +34 600 123 456</p>
+              </div>
+
+              <p class="text-slate-400 overflow-hidden whitespace-nowrap mb-2">------------------------------------</p>
+
+              <div class="space-y-1 text-[10px] mb-2">
+                <div class="flex justify-between font-bold">
+                  <span>CONCEPTO</span>
+                  <span>TOTAL</span>
+                </div>
+                <div class="space-y-1">
+                  <div class="space-y-0.5">
+                    <div class="flex justify-between">
+                      <span class="font-bold truncate max-w-[170px]">SACO DE ALIMENTO PREMIUM 25KG</span>
+                      <span>45.00 $</span>
+                    </div>
+                    <div class="text-[8px] text-slate-500 pl-2">
+                      1 UNID x 45.00 $
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p class="text-slate-400 overflow-hidden whitespace-nowrap mb-2">------------------------------------</p>
+
+              <div class="space-y-1 text-right text-[10px] font-bold">
+                <div class="flex justify-between text-xs font-black border-t border-dashed border-slate-300 pt-1">
+                  <span>TOTAL:</span>
+                  <span class="text-slate-900">45.00 $</span>
+                </div>
+              </div>
+
+              <p class="text-slate-400 overflow-hidden whitespace-nowrap mt-3 mb-3">------------------------------------</p>
+
+              <div class="text-center space-y-1">
+                <p id="preview-tab-footer1" class="text-[9px] font-bold">¡GRACIAS POR SU PREFERENCIA!</p>
+                <p id="preview-tab-footer2" class="text-[8px] text-slate-500">Documento No Válido como Factura</p>
+                <div class="flex flex-col items-center pt-2 gap-1">
+                  <div class="w-24 h-5 bg-slate-900 relative flex items-center justify-between px-2">
+                    <div class="h-full w-px bg-white"></div>
+                    <div class="h-full w-0.5 bg-white"></div>
+                    <div class="h-full w-1 bg-white"></div>
+                    <div class="h-full w-px bg-white"></div>
+                    <div class="h-full w-0.5 bg-white"></div>
+                    <div class="h-full w-px bg-white"></div>
+                    <div class="h-full w-1 bg-white"></div>
+                    <div class="h-full w-0.5 bg-white"></div>
+                    <div class="h-full w-px bg-white"></div>
+                  </div>
+                  <span class="text-[7px] text-slate-400 tracking-widest font-mono">*PREVENTA*</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: productos -->
+        <div id="tab-view-productos" class="hidden space-y-6">
+          <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl p-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                  <i data-lucide="package" class="text-emerald-400 w-5 h-5"></i>
+                  Listado de Productos (Stock)
+                </h3>
+                <p class="text-xs text-slate-400 mt-0.5">Vea y administre los productos y sus precios sincronizados con AppSheet.</p>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="relative min-w-[200px]">
+                  <i data-lucide="search" class="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-400"></i>
+                  <input type="text" id="stock-search" onkeyup="filterAndRenderProductosTable()" placeholder="Buscar producto..." class="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-all">
+                </div>
+                <button onclick="openProductCreateModal()" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">
+                  <i data-lucide="plus" class="w-4 h-4"></i>
+                  Nuevo Producto
+                </button>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto border border-slate-700 rounded-xl">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="border-b border-slate-700 text-slate-400 text-xs font-semibold uppercase bg-slate-900/30">
+                    <th class="py-3 px-6">ID / Material</th>
+                    <th class="py-3 px-6">Descripción</th>
+                    <th class="py-3 px-6 text-right">Precio</th>
+                    <th class="py-3 px-6">Fórmula Concatenada</th>
+                  </tr>
+                </thead>
+                <tbody id="productos-table-body" class="divide-y divide-slate-700/50 text-sm">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 4: clientes -->
+        <div id="tab-view-clientes" class="hidden space-y-6">
+          <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl p-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                  <i data-lucide="users" class="text-emerald-400 w-5 h-5"></i>
+                  Listado de Clientes
+                </h3>
+                <p class="text-xs text-slate-400 mt-0.5">Consulte y administre el directorio de clientes y sus números telefónicos.</p>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="relative min-w-[200px]">
+                  <i data-lucide="search" class="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-400"></i>
+                  <input type="text" id="clientes-search" onkeyup="filterAndRenderClientesTable()" placeholder="Buscar cliente..." class="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-all">
+                </div>
+                <button onclick="openClientCreateModal()" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">
+                  <i data-lucide="user-plus" class="w-4 h-4"></i>
+                  Nuevo Cliente
+                </button>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto border border-slate-700 rounded-xl">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="border-b border-slate-700 text-slate-400 text-xs font-semibold uppercase bg-slate-900/30">
+                    <th class="py-3 px-6">ID Cliente</th>
+                    <th class="py-3 px-6">Nombre Completo</th>
+                    <th class="py-3 px-6">Teléfono de Contacto</th>
+                  </tr>
+                </thead>
+                <tbody id="clientes-table-body" class="divide-y divide-slate-700/50 text-sm">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
       </div> <!-- End of Main Content Block -->
     </main>
 
@@ -422,7 +637,7 @@
 
             <div class="relative" id="client-dropdown-container">
               <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Nombre del Cliente *</label>
-              <input type="text" id="form-cliente" autocomplete="off" onfocus="showClientDropdown()" oninput="filterClientDropdown(this.value)" required placeholder="Ej. María González" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+              <input type="text" id="form-cliente" list="clientes-list" autocomplete="on" onfocus="showClientDropdown()" oninput="handleClientInput(this.value)" required placeholder="Ej. María González" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
               <div id="client-dropdown-panel" class="hidden absolute left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 p-2 max-h-60 overflow-y-auto space-y-1">
                 <!-- Dynamically populated options -->
               </div>
@@ -1119,10 +1334,107 @@
       productosGlobal = lsGet(LS_KEYS.stock);
       populateClientesDatalist();
       populateProductosDatalist();
+      filterAndRenderProductosTable();
+      filterAndRenderClientesTable();
+    }
+
+    function filterAndRenderProductosTable() {
+      const q = (document.getElementById('stock-search').value || '').toLowerCase().trim();
+      const tbody = document.getElementById('productos-table-body');
+      if (!tbody) return;
+
+      tbody.innerHTML = '';
+
+      const filtered = productosGlobal.filter(p => {
+        return (p.material || '').toLowerCase().includes(q) ||
+               (p.TextoBreveDelMaterial || '').toLowerCase().includes(q) ||
+               (p.concat || '').toLowerCase().includes(q);
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="4" class="py-8 text-center text-slate-400">No se encontraron productos en stock.</td>
+          </tr>
+        `;
+        return;
+      }
+
+      filtered.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-700/30 transition-colors border-b border-slate-700/30";
+        tr.innerHTML = `
+          <td class="py-3 px-6 font-mono text-slate-300 font-bold">${p.material}</td>
+          <td class="py-3 px-6 text-white font-medium">${p.TextoBreveDelMaterial}</td>
+          <td class="py-3 px-6 text-right text-emerald-400 font-black font-mono">${(p.precio || 0).toFixed(2)} $</td>
+          <td class="py-3 px-6 text-slate-400 text-xs font-mono">${p.concat || ''}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterAndRenderClientesTable() {
+      const q = (document.getElementById('clientes-search').value || '').toLowerCase().trim();
+      const tbody = document.getElementById('clientes-table-body');
+      if (!tbody) return;
+
+      tbody.innerHTML = '';
+
+      const filtered = clientesGlobal.filter(c => {
+        return (c.nombre || '').toLowerCase().includes(q) ||
+               (c.telefono || '').toLowerCase().includes(q) ||
+               (c.id || '').toLowerCase().includes(q);
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="3" class="py-8 text-center text-slate-400">No se encontraron clientes registrados.</td>
+          </tr>
+        `;
+        return;
+      }
+
+      filtered.forEach(c => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-700/30 transition-colors border-b border-slate-700/30";
+        tr.innerHTML = `
+          <td class="py-3 px-6 font-mono text-slate-400 font-bold">#${c.id}</td>
+          <td class="py-3 px-6 text-white font-bold">${c.nombre}</td>
+          <td class="py-3 px-6 text-slate-300 font-medium flex items-center gap-2 mt-1">
+            <i data-lucide="phone" class="w-3.5 h-3.5 text-slate-500"></i>
+            <span>${c.telefono || 'Sin teléfono'}</span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      lucide.createIcons();
     }
 
     function populateClientesDatalist() {
-      // Datalists are replaced by custom searchable dropdowns.
+      const list = document.getElementById('clientes-list');
+      if (!list) return;
+      list.innerHTML = '';
+      clientesGlobal.forEach(c => {
+        const option = document.createElement('option');
+        option.value = c.nombre;
+        list.appendChild(option);
+      });
+    }
+
+    function handleClientInput(value) {
+      filterClientDropdown(value);
+
+      // Auto-extract and populate phone if match found
+      const matched = clientesGlobal.find(c => c.nombre.toLowerCase() === value.toLowerCase().trim());
+      if (matched) {
+        const phoneInput = document.getElementById('form-telefono');
+        if (phoneInput) {
+          phoneInput.value = matched.telefono || '';
+          updateFormTicketPreview();
+        }
+      }
     }
 
     function populateProductosDatalist() {
@@ -1355,6 +1667,32 @@
 
       const q = query.toLowerCase().trim();
 
+      // Automatically extract price on exact match when typing/pasting
+      const exactMatch = productosGlobal.find(p =>
+        (p.material || '').toLowerCase() === q ||
+        (p.TextoBreveDelMaterial || '').toLowerCase() === q ||
+        (p.concat || '').toLowerCase() === q
+      );
+
+      if (exactMatch) {
+        if (formItems[rowIndex]) {
+          formItems[rowIndex].producto = exactMatch.material;
+          formItems[rowIndex].precio_unitario = exactMatch.precio;
+        }
+        const row = document.getElementById(`form-row-${rowIndex}`);
+        if (row) {
+          const priceInput = row.querySelector('input[type="number"][step="0.01"]');
+          if (priceInput) priceInput.value = exactMatch.precio;
+
+          const qtyInput = row.querySelector('input[type="number"][min="1"]');
+          const qty = qtyInput ? (parseInt(qtyInput.value) || 1) : 1;
+          const subEl = document.getElementById(`form-subtotal-${rowIndex}`);
+          if (subEl) subEl.textContent = `${(qty * exactMatch.precio).toFixed(2)} $`;
+        }
+        calculateFormTotal();
+        updateFormTicketPreview();
+      }
+
       const filtered = productosGlobal.filter(p => {
         const mat = (p.material || '').toLowerCase();
         const text = (p.TextoBreveDelMaterial || '').toLowerCase();
@@ -1374,7 +1712,7 @@
         optionDiv.className = "text-xs text-slate-200 hover:bg-emerald-600 hover:text-white p-2.5 rounded-lg cursor-pointer transition-colors";
         const displayName = p.TextoBreveDelMaterial || p.concat || p.material;
         optionDiv.innerHTML = `
-          <div class="font-bold text-white group-hover:text-white truncate">${displayName}</div>
+          <div class="font-bold text-white group-hover:text-white whitespace-normal break-words">${displayName}</div>
           <div class="text-[10px] text-slate-400 mt-0.5">ID: ${p.material} • Precio: ${p.precio.toFixed(2)} $</div>
         `;
         optionDiv.onmousedown = (e) => {
@@ -1554,8 +1892,8 @@
               </div>
             </div>
 
-            <div id="product-panel-${rowIndex}" class="hidden absolute left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 p-2 max-h-60 flex flex-col" onclick="event.stopPropagation()">
-              <div id="product-options-${rowIndex}" class="overflow-y-auto flex-1 space-y-0.5 max-h-48">
+            <div id="product-panel-${rowIndex}" class="hidden absolute left-0 md:w-[500px] min-w-[450px] mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 p-2 max-h-[350px] flex flex-col" onclick="event.stopPropagation()">
+              <div id="product-options-${rowIndex}" class="overflow-y-auto flex-1 space-y-0.5 max-h-80">
                 <!-- Filter options -->
               </div>
             </div>
@@ -2301,6 +2639,80 @@
       showToast('Valores de plantilla restablecidos', 'info');
     }
 
+    // Tab switching mechanism
+    function switchTab(tabId) {
+      const tabIds = ['preventas', 'template', 'productos', 'clientes'];
+
+      // Hide all tabs
+      tabIds.forEach(id => {
+        const el = document.getElementById(`tab-view-${id}`);
+        if (el) el.classList.add('hidden');
+
+        // Reset nav button styles
+        const btn = document.getElementById(`nav-btn-${id}`);
+        if (btn) {
+          btn.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-slate-300 hover:text-white hover:bg-slate-700/50 border border-transparent";
+        }
+      });
+
+      // Show selected tab
+      const activeEl = document.getElementById(`tab-view-${tabId}`);
+      if (activeEl) {
+        if (tabId === 'template') {
+          activeEl.classList.remove('hidden');
+          activeEl.className = "grid grid-cols-1 lg:grid-cols-12 gap-8";
+        } else {
+          activeEl.classList.remove('hidden');
+        }
+      }
+
+      // Style active button
+      const activeBtn = document.getElementById(`nav-btn-${tabId}`);
+      if (activeBtn) {
+        // If sidebar is collapsed, keep center alignment styling
+        const sidebar = document.getElementById('app-sidebar');
+        if (sidebar && sidebar.classList.contains('sidebar-collapsed')) {
+          activeBtn.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all bg-emerald-600 text-white shadow-lg shadow-emerald-600/10 justify-center !px-0";
+        } else {
+          activeBtn.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all bg-emerald-600 text-white shadow-lg shadow-emerald-600/10";
+        }
+      }
+    }
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('app-sidebar');
+      const toggleIcon = document.getElementById('sidebar-toggle-icon');
+      if (!sidebar) return;
+
+      const isCollapsed = sidebar.classList.toggle('sidebar-collapsed');
+
+      if (isCollapsed) {
+        sidebar.classList.remove('lg:w-80');
+        sidebar.classList.add('lg:w-24');
+        if (toggleIcon) {
+          toggleIcon.setAttribute('data-lucide', 'chevron-right');
+        }
+      } else {
+        sidebar.classList.remove('lg:w-24');
+        sidebar.classList.add('lg:w-80');
+        if (toggleIcon) {
+          toggleIcon.setAttribute('data-lucide', 'chevron-left');
+        }
+      }
+
+      // Update currently active tab button center alignment
+      const activeBtn = document.querySelector('nav button.bg-emerald-600');
+      if (activeBtn) {
+        if (isCollapsed) {
+          activeBtn.classList.add('justify-center', '!px-0');
+        } else {
+          activeBtn.classList.remove('justify-center', '!px-0');
+        }
+      }
+
+      lucide.createIcons();
+    }
+
     function applyTicketConfig(config) {
       const c = config || DEFAULT_TICKET_CONFIG;
 
@@ -2327,6 +2739,18 @@
       if (viewFooter1) viewFooter1.textContent = c.footer1;
       const viewFooter2 = document.getElementById('view-ticket-footer2');
       if (viewFooter2) viewFooter2.textContent = c.footer2;
+
+      // Update dedicated template view preview
+      const tabSlogan = document.getElementById('preview-tab-slogan');
+      if (tabSlogan) tabSlogan.textContent = c.slogan;
+      const tabCompany = document.getElementById('preview-tab-company');
+      if (tabCompany) tabCompany.textContent = c.company;
+      const tabNit = document.getElementById('preview-tab-nit');
+      if (tabNit) tabNit.textContent = c.nit;
+      const tabFooter1 = document.getElementById('preview-tab-footer1');
+      if (tabFooter1) tabFooter1.textContent = c.footer1;
+      const tabFooter2 = document.getElementById('preview-tab-footer2');
+      if (tabFooter2) tabFooter2.textContent = c.footer2;
     }
   </script>
 </body>

@@ -440,10 +440,12 @@ app.get('/api/productos', (req, res) => {
 // GET /api/preventas - Get all pre-sales
 app.get('/api/preventas', async (req, res) => {
   try {
-    // Try syncing from AppSheet first
-    await syncFromAppSheetToSQLite().catch(err => {
-      console.warn("AppSheet Sync failed during GET, falling back to SQLite directly:", err.message);
-    });
+    // Solo sincronizar si se solicita explícitamente mediante ?sync=true
+    if (req.query.sync === 'true') {
+      await syncFromAppSheetToSQLite().catch(err => {
+        console.warn("AppSheet Sync failed during GET, falling back to SQLite directly:", err.message);
+      });
+    }
 
     const preventas = db.prepare('SELECT * FROM Preventa ORDER BY fecha DESC, id DESC').all();
 

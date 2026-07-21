@@ -522,15 +522,45 @@ app.get('/api/preventas/:id', (req, res) => {
 });
 
 // POST /api/preventas - Create a new pre-sale and its details
-app.post('/api/preventas', async (req, res) => {
-  const { cliente, telefono, fecha, estado, notas, detalles } = req.body;
+// 1. Aumentamos la espera a 4 segundos para asegurar que el "Padre" ya exista en Sheets
+    await wait(4000); 
 
-  if (!cliente || !fecha || !detalles || !Array.isArray(detalles) || detalles.length === 0) {
-    return res.status(400).json({ error: 'Datos de preventa incompletos. Se requiere cliente, fecha y al menos un detalle.' });
-  }
+    const now = new Date();
+    const formattedDateTime = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth()+1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
 
-  try {
-    // Calculate total from details to ensure correctness
+    const getStockShortText = db.prepare('SELECT TextoBreveDelMaterial FROM STOCK WHERE material = ?');
+
+    const dRows = detalles.map(item => {
+      const stockRow = getStockShortText.get(item.producto);
+      
+      // 2. Convertimos todos los valores numéricos a Texto y cambiamos el punto por coma
+      // Esto asegura compatibilidad estricta con el Locale: "es-ES" de tu API
+      const cantidadStr = String(item.cantidad).replace('.', ',');
+      const precioStr = String(item.precio_unitario).replace('.', ',');
+      const totalLineaStr = String(item.cantidad * item.precio_unitario).replace('.', ',');
+
+      return {
+        IDDETALLE: String(item.id),
+        // IMPORTANTE: En el PUT usa String(id) en lugar de String(newId)
+        IDTransaccion: String(newId), 
+        ARTICULO: String(item.producto),
+        CANTIDAD: cantidadStr,
+        PRECIO: precioStr,
+        IMPUESTO: "0",
+        'TOTAL LINEA': totalLineaStr,
+        TextoBreve: (stockRow && stockRow.TextoBreveDelMaterial) || String(item.producto),
+        CambioDePrecio: "Falso", // 3. Enviamos el booleano como texto
+        NumeroDeFactura: "",
+        FechaYHora: formattedDateTime,
+        Cliente: String(cliente),
+        NombreDelCliente: String(cliente)
+      };
+    });
+
+    const detalleAppSheetResult = await callAppSheetAPIVerbose("DETALLE_PREVENTA", "Add", dRows);
+    if (!detalleAppSheetResult.ok) {
+      console.error("AppSheet API DETALLE_PREVENTA Add failed:", detalleAppSheetResult.errorText);
+    }    // Calculate total from details to ensure correctness
     const totalCalculado = detalles.reduce((sum, item) => {
       const qty = parseFloat(item.cantidad) || 0.0;
       const price = parseFloat(item.precio_unitario) || 0.0;
@@ -657,39 +687,45 @@ app.post('/api/preventas', async (req, res) => {
 });
 
 // PUT /api/preventas/:id - Update an existing pre-sale and its details
-app.put('/api/preventas/:id', async (req, res) => {
-  const id = req.params.id;
-  const { cliente, telefono, fecha, estado, notas, detalles } = req.body;
+// 1. Aumentamos la espera a 4 segundos para asegurar que el "Padre" ya exista en Sheets
+    await wait(4000); 
 
-  if (!cliente || !fecha || !detalles || !Array.isArray(detalles) || detalles.length === 0) {
-    return res.status(400).json({ error: 'Datos de preventa incompletos.' });
-  }
+    const now = new Date();
+    const formattedDateTime = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth()+1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
 
-  try {
-    const existing = db.prepare('SELECT id FROM Preventa WHERE id = ?').get(id);
-    if (!existing) {
-      return res.status(404).json({ error: 'Preventa no encontrada' });
-    }
+    const getStockShortText = db.prepare('SELECT TextoBreveDelMaterial FROM STOCK WHERE material = ?');
 
-    const totalCalculado = detalles.reduce((sum, item) => {
-      const qty = parseFloat(item.cantidad) || 0.0;
-      const price = parseFloat(item.precio_unitario) || 0.0;
-      return sum + (qty * price);
-    }, 0);
+    const dRows = detalles.map(item => {
+      const stockRow = getStockShortText.get(item.producto);
+      
+      // 2. Convertimos todos los valores numéricos a Texto y cambiamos el punto por coma
+      // Esto asegura compatibilidad estricta con el Locale: "es-ES" de tu API
+      const cantidadStr = String(item.cantidad).replace('.', ',');
+      const precioStr = String(item.precio_unitario).replace('.', ',');
+      const totalLineaStr = String(item.cantidad * item.precio_unitario).replace('.', ',');
 
-    const updatePreventa = db.prepare(`
-      UPDATE Preventa
-      SET cliente = ?, telefono = ?, fecha = ?, total = ?, estado = ?, notas = ?
-      WHERE id = ?
-    `);
+      return {
+        IDDETALLE: String(item.id),
+        // IMPORTANTE: En el PUT usa String(id) en lugar de String(newId)
+        IDTransaccion: String(newId), 
+        ARTICULO: String(item.producto),
+        CANTIDAD: cantidadStr,
+        PRECIO: precioStr,
+        IMPUESTO: "0",
+        'TOTAL LINEA': totalLineaStr,
+        TextoBreve: (stockRow && stockRow.TextoBreveDelMaterial) || String(item.producto),
+        CambioDePrecio: "Falso", // 3. Enviamos el booleano como texto
+        NumeroDeFactura: "",
+        FechaYHora: formattedDateTime,
+        Cliente: String(cliente),
+        NombreDelCliente: String(cliente)
+      };
+    });
 
-    const deleteDetalles = db.prepare('DELETE FROM DETALLE_PREVENTA WHERE preventa_id = ?');
-    const insertDetalle = db.prepare(`
-      INSERT INTO DETALLE_PREVENTA (id, preventa_id, producto, cantidad, precio_unitario, subtotal)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
-
-    // Retrieve old detail IDs from SQLite so we can delete them from AppSheet
+    const detalleAppSheetResult = await callAppSheetAPIVerbose("DETALLE_PREVENTA", "Add", dRows);
+    if (!detalleAppSheetResult.ok) {
+      console.error("AppSheet API DETALLE_PREVENTA Add failed:", detalleAppSheetResult.errorText);
+    }    // Retrieve old detail IDs from SQLite so we can delete them from AppSheet
     const oldDetails = db.prepare('SELECT id FROM DETALLE_PREVENTA WHERE preventa_id = ?').all(id);
 
     // Perform inside transaction locally

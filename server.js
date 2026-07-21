@@ -202,8 +202,6 @@ async function callAppSheetAPIVerbose(tableName, action, rows = [], selector = n
 
     const text = await response.text();
     if (!text || text.length === 0) {
-      // AppSheet respondió 200 OK pero sin cuerpo. Para Add/Edit con filas enviadas,
-      // esto suele significar que no confirmó ninguna fila -> lo tratamos como sospechoso.
       if (rows && rows.length > 0 && (action === "Add" || "Edit" === action)) {
         const warn = `AppSheet respondió 200 OK pero sin ningún dato de confirmación (cuerpo vacío) al intentar ${action} en "${tableName}". Es posible que la fila no se haya guardado realmente; revisa que todos los nombres de columna coincidan exactamente con los de tu hoja.`;
         console.error(warn);
@@ -220,16 +218,12 @@ async function callAppSheetAPIVerbose(tableName, action, rows = [], selector = n
       return { ok: true, status: response.status, data: [], errorText: null };
     }
 
-    // AppSheet a veces responde HTTP 200 pero incluye el error dentro del cuerpo
-    // (por ejemplo, un objeto con "Error"/"errors"/"message" en vez de un array de filas).
     if (parsed && !Array.isArray(parsed) && (parsed.error || parsed.Error || parsed.errors || parsed.message)) {
       const bodyError = parsed.error || parsed.Error || parsed.errors || parsed.message;
       console.error(`AppSheet API devolvió 200 OK pero con error en el cuerpo (tabla ${tableName}):`, JSON.stringify(bodyError));
       return { ok: false, status: response.status, data: null, errorText: typeof bodyError === 'string' ? bodyError : JSON.stringify(bodyError) };
     }
 
-    // Para Add/Edit: si mandamos N filas y AppSheet no confirma ninguna, lo marcamos como sospechoso
-    // (rechazo silencioso de validación, ej. columna requerida faltante o tipo de dato inválido).
     if (rows && rows.length > 0 && (action === "Add" || action === "Edit") && Array.isArray(parsed) && parsed.length === 0) {
       const warn = `AppSheet respondió 200 OK pero confirmó 0 de ${rows.length} fila(s) al hacer ${action} en "${tableName}". Probablemente rechazó la fila por una validación (columna requerida, tipo de dato o Ref inválida) sin devolver el detalle del error.`;
       console.error(warn);
@@ -243,10 +237,7 @@ async function callAppSheetAPIVerbose(tableName, action, rows = [], selector = n
   }
 }
 
-// Pequeña espera para evitar condiciones de carrera: cuando se agrega DETALLE_PREVENTA
-// justo después de Preventa, si AppSheet valida la columna Ref (IDTransaccion -> Preventa)
-// contra la hoja de Google Sheets, puede que la fila padre aún no esté visible por
-// la latencia propia de Sheets, y entonces rechace la fila hija completa.
+// Pequeña espera para evitar condiciones de carrera
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -259,7 +250,6 @@ async function syncFromAppSheetToSQLite() {
   const clientesFromAppSheet = await callAppSheetAPI("clientes", "Find");
   const stockFromAppSheet = await callAppSheetAPI("stock", "Find");
 
-  // Sync CLIENTES if returned
   if (Array.isArray(clientesFromAppSheet) && clientesFromAppSheet.length > 0) {
     db.prepare('DELETE FROM CLIENTES').run();
     const insertCliente = db.prepare(`
@@ -267,7 +257,6 @@ async function syncFromAppSheetToSQLite() {
       VALUES (?, ?, ?)
     `);
     for (const c of clientesFromAppSheet) {
-      // normalize keys to support robust case insensitivity
       const cNormalized = {};
       for (const k of Object.keys(c)) {
         cNormalized[k.toLowerCase()] = c[k];
@@ -281,7 +270,6 @@ async function syncFromAppSheetToSQLite() {
     }
   }
 
-  // Sync STOCK if returned
   if (Array.isArray(stockFromAppSheet) && stockFromAppSheet.length > 0) {
     db.prepare('DELETE FROM STOCK').run();
     const insertStock = db.prepare(`
@@ -306,7 +294,6 @@ async function syncFromAppSheetToSQLite() {
   if (Array.isArray(preventasFromAppSheet) && preventasFromAppSheet.length > 0) {
     console.log(`Syncing ${preventasFromAppSheet.length} preventas from AppSheet...`);
     db.transaction(() => {
-      // Clear local tables
       db.prepare('DELETE FROM DETALLE_PREVENTA').run();
       db.prepare('DELETE FROM Preventa').run();
 
@@ -328,7 +315,6 @@ async function syncFromAppSheetToSQLite() {
         const estado = p.Estado || p.estado || 'Pendiente';
         const notas = p.Notas || p.notas || '';
 
-        // Resolve customer telephone if we can
         let telefono = '';
         if (idcliente) {
           const clientRow = db.prepare('SELECT telefono FROM CLIENTES WHERE id = ? OR nombre = ?').get(idcliente, idcliente);
@@ -337,15 +323,7 @@ async function syncFromAppSheetToSQLite() {
           }
         }
 
-        insertPreventa.run(
-          idtransacion,
-          idcliente,
-          telefono,
-          fecha,
-          totalVal,
-          estado,
-          notas
-        );
+        insertPreventa.run(idtransacion, idcliente, telefono, fecha, totalVal, estado, notas);
       }
 
       if (Array.isArray(detallesFromAppSheet)) {
@@ -357,14 +335,7 @@ async function syncFromAppSheetToSQLite() {
           const precioVal = parseFloat(d.PRECIO || d.precio || d.precio_unitario) || 0.0;
           const subtotalVal = parseFloat(d['TOTAL LINEA'] || d.total_linea || d.subtotal) || (cantidadVal * precioVal);
 
-          insertDetalle.run(
-            iddetalle,
-            idtransaccion,
-            articulo,
-            cantidadVal,
-            precioVal,
-            subtotalVal
-          );
+          insertDetalle.run(iddetalle, idtransaccion, articulo, cantidadVal, precioVal, subtotalVal);
         }
       }
     })();
@@ -384,7 +355,6 @@ app.post('/api/clientes', async (req, res) => {
     return res.status(400).json({ error: 'El nombre del cliente es obligatorio.' });
   }
 
-  // Generate an ID if not provided
   const clientId = id || 'cli-' + Math.random().toString(36).substring(2, 10);
 
   try {
@@ -395,7 +365,6 @@ app.post('/api/clientes', async (req, res) => {
 
     insertCliente.run(clientId, nombre, telefono || '');
 
-    // Propagate to AppSheet (non-blocking)
     const cRow = {
       idcliente: clientId,
       nombrecliente: nombre,
@@ -436,7 +405,6 @@ app.post('/api/productos', async (req, res) => {
 
     insertStock.run(material, TextoBreveDelMaterial, precioVal, concat);
 
-    // Propagate to AppSheet (non-blocking)
     const sRow = {
       material: material,
       TextoBreveDelMaterial: TextoBreveDelMaterial,
@@ -481,7 +449,6 @@ app.get('/api/productos', (req, res) => {
 // GET /api/preventas - Get all pre-sales
 app.get('/api/preventas', async (req, res) => {
   try {
-    // Solo sincronizar si se solicita explícitamente mediante ?sync=true
     if (req.query.sync === 'true') {
       await syncFromAppSheetToSQLite().catch(err => {
         console.warn("AppSheet Sync failed during GET, falling back to SQLite directly:", err.message);
@@ -490,7 +457,6 @@ app.get('/api/preventas', async (req, res) => {
 
     const preventas = db.prepare('SELECT * FROM Preventa ORDER BY fecha DESC, id DESC').all();
 
-    // For each preventa, fetch its details
     const preventasWithDetails = preventas.map(p => {
       const details = db.prepare('SELECT * FROM DETALLE_PREVENTA WHERE preventa_id = ?').all(p.id);
       return { ...p, detalles: details };
@@ -522,52 +488,20 @@ app.get('/api/preventas/:id', (req, res) => {
 });
 
 // POST /api/preventas - Create a new pre-sale and its details
-// 1. Aumentamos la espera a 4 segundos para asegurar que el "Padre" ya exista en Sheets
-    await wait(4000); 
+app.post('/api/preventas', async (req, res) => {
+  const { cliente, telefono, fecha, total, estado, notas, detalles } = req.body;
 
-    const now = new Date();
-    const formattedDateTime = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth()+1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+  if (!cliente || !fecha || !detalles || !Array.isArray(detalles) || detalles.length === 0) {
+    return res.status(400).json({ error: 'Faltan datos obligatorios o detalles de preventa.' });
+  }
 
-    const getStockShortText = db.prepare('SELECT TextoBreveDelMaterial FROM STOCK WHERE material = ?');
-
-    const dRows = detalles.map(item => {
-      const stockRow = getStockShortText.get(item.producto);
-      
-      // 2. Convertimos todos los valores numéricos a Texto y cambiamos el punto por coma
-      // Esto asegura compatibilidad estricta con el Locale: "es-ES" de tu API
-      const cantidadStr = String(item.cantidad).replace('.', ',');
-      const precioStr = String(item.precio_unitario).replace('.', ',');
-      const totalLineaStr = String(item.cantidad * item.precio_unitario).replace('.', ',');
-
-      return {
-        IDDETALLE: String(item.id),
-        // IMPORTANTE: En el PUT usa String(id) en lugar de String(newId)
-        IDTransaccion: String(newId), 
-        ARTICULO: String(item.producto),
-        CANTIDAD: cantidadStr,
-        PRECIO: precioStr,
-        IMPUESTO: "0",
-        'TOTAL LINEA': totalLineaStr,
-        TextoBreve: (stockRow && stockRow.TextoBreveDelMaterial) || String(item.producto),
-        CambioDePrecio: "Falso", // 3. Enviamos el booleano como texto
-        NumeroDeFactura: "",
-        FechaYHora: formattedDateTime,
-        Cliente: String(cliente),
-        NombreDelCliente: String(cliente)
-      };
-    });
-
-    const detalleAppSheetResult = await callAppSheetAPIVerbose("DETALLE_PREVENTA", "Add", dRows);
-    if (!detalleAppSheetResult.ok) {
-      console.error("AppSheet API DETALLE_PREVENTA Add failed:", detalleAppSheetResult.errorText);
-    }    // Calculate total from details to ensure correctness
+  try {
     const totalCalculado = detalles.reduce((sum, item) => {
       const qty = parseFloat(item.cantidad) || 0.0;
       const price = parseFloat(item.precio_unitario) || 0.0;
       return sum + (qty * price);
     }, 0);
 
-    // Respect the correlative structure "2026-01-M1P505-"
     const prefix = "2026-01-M1P505-";
     const allPreventas = db.prepare('SELECT id FROM Preventa').all();
     let maxNum = 0;
@@ -581,7 +515,7 @@ app.get('/api/preventas/:id', (req, res) => {
       }
     }
     if (maxNum === 0) {
-      maxNum = 331; // fallback default
+      maxNum = 331; 
     }
     const newId = prefix + (maxNum + 1);
 
@@ -595,7 +529,6 @@ app.get('/api/preventas/:id', (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?)
     `);
 
-    // Use transaction for safe local creation
     const executeTransaction = db.transaction(() => {
       insertPreventa.run(
         newId,
@@ -614,13 +547,12 @@ app.get('/api/preventas/:id', (req, res) => {
         const item_id = 'det-' + Math.random().toString(36).substring(2, 10);
         const subtotal = item.cantidad * item.precio_unitario;
         insertDetalle.run(item_id, newId, item.producto, item.cantidad, item.precio_unitario, subtotal);
-        item.id = item_id; // Track the generated ID for detail
+        item.id = item_id; 
       }
     });
 
     executeTransaction();
 
-    // Now send the changes to AppSheet cloud backend mapped to real columns
     const pRow = {
       IDTransacion: newId,
       IDcliente: cliente,
@@ -631,17 +563,14 @@ app.get('/api/preventas/:id', (req, res) => {
       Notas: notas || ''
     };
 
-    // Call Add action on AppSheet for Preventa
     const preventaAppSheetResult = await callAppSheetAPIVerbose("Preventa", "Add", [pRow]);
     if (!preventaAppSheetResult.ok) {
       console.error("AppSheet API Preventa Add failed:", preventaAppSheetResult.errorText);
     }
 
-    // Pequeña espera para que Google Sheets/AppSheet reflejen la fila padre antes
-    // de intentar agregar los hijos que la referencian (evita rechazo por Ref inválida).
-    await wait(1500);
+    // Esperamos 4 segundos para asegurar que AppSheet registre la preventa "Padre"
+    await wait(4000); 
 
-    // Call Add action on AppSheet for DETALLE_PREVENTA
     const now = new Date();
     const formattedDateTime = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth()+1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
 
@@ -649,20 +578,25 @@ app.get('/api/preventas/:id', (req, res) => {
 
     const dRows = detalles.map(item => {
       const stockRow = getStockShortText.get(item.producto);
+      
+      const cantidadStr = String(item.cantidad).replace('.', ',');
+      const precioStr = String(item.precio_unitario).replace('.', ',');
+      const totalLineaStr = String(item.cantidad * item.precio_unitario).replace('.', ',');
+
       return {
         IDDETALLE: String(item.id),
-        IDTransaccion: String(newId),
-        ARTICULO: item.producto,
-        CANTIDAD: item.cantidad,
-        PRECIO: item.precio_unitario,
-        IMPUESTO: 0,
-        'TOTAL LINEA': item.cantidad * item.precio_unitario,
-        TextoBreve: (stockRow && stockRow.TextoBreveDelMaterial) || item.producto,
-        CambioDePrecio: false,
-        NumeroDeFactura: '',
+        IDTransaccion: String(newId), 
+        ARTICULO: String(item.producto),
+        CANTIDAD: cantidadStr,
+        PRECIO: precioStr,
+        IMPUESTO: "0",
+        'TOTAL LINEA': totalLineaStr,
+        TextoBreve: (stockRow && stockRow.TextoBreveDelMaterial) || String(item.producto),
+        CambioDePrecio: "Falso",
+        NumeroDeFactura: "",
         FechaYHora: formattedDateTime,
-        Cliente: cliente,
-        NombreDelCliente: cliente
+        Cliente: String(cliente),
+        NombreDelCliente: String(cliente)
       };
     });
 
@@ -671,7 +605,6 @@ app.get('/api/preventas/:id', (req, res) => {
       console.error("AppSheet API DETALLE_PREVENTA Add failed:", detalleAppSheetResult.errorText);
     }
 
-    // Fetch and return the newly created preventa
     const createdPreventa = db.prepare('SELECT * FROM Preventa WHERE id = ?').get(newId);
     const createdDetails = db.prepare('SELECT * FROM DETALLE_PREVENTA WHERE preventa_id = ?').all(newId);
 
@@ -687,48 +620,34 @@ app.get('/api/preventas/:id', (req, res) => {
 });
 
 // PUT /api/preventas/:id - Update an existing pre-sale and its details
-// 1. Aumentamos la espera a 4 segundos para asegurar que el "Padre" ya exista en Sheets
-    await wait(4000); 
+app.put('/api/preventas/:id', async (req, res) => {
+  const id = req.params.id;
+  const { cliente, telefono, fecha, estado, notas, detalles } = req.body;
 
-    const now = new Date();
-    const formattedDateTime = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth()+1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+  if (!cliente || !fecha || !detalles || !Array.isArray(detalles) || detalles.length === 0) {
+    return res.status(400).json({ error: 'Faltan datos obligatorios o detalles de preventa.' });
+  }
 
-    const getStockShortText = db.prepare('SELECT TextoBreveDelMaterial FROM STOCK WHERE material = ?');
+  try {
+    const totalCalculado = detalles.reduce((sum, item) => {
+      const qty = parseFloat(item.cantidad) || 0.0;
+      const price = parseFloat(item.precio_unitario) || 0.0;
+      return sum + (qty * price);
+    }, 0);
 
-    const dRows = detalles.map(item => {
-      const stockRow = getStockShortText.get(item.producto);
-      
-      // 2. Convertimos todos los valores numéricos a Texto y cambiamos el punto por coma
-      // Esto asegura compatibilidad estricta con el Locale: "es-ES" de tu API
-      const cantidadStr = String(item.cantidad).replace('.', ',');
-      const precioStr = String(item.precio_unitario).replace('.', ',');
-      const totalLineaStr = String(item.cantidad * item.precio_unitario).replace('.', ',');
+    const updatePreventa = db.prepare(`
+      UPDATE Preventa SET cliente = ?, telefono = ?, fecha = ?, total = ?, estado = ?, notas = ? WHERE id = ?
+    `);
 
-      return {
-        IDDETALLE: String(item.id),
-        // IMPORTANTE: En el PUT usa String(id) en lugar de String(newId)
-        IDTransaccion: String(newId), 
-        ARTICULO: String(item.producto),
-        CANTIDAD: cantidadStr,
-        PRECIO: precioStr,
-        IMPUESTO: "0",
-        'TOTAL LINEA': totalLineaStr,
-        TextoBreve: (stockRow && stockRow.TextoBreveDelMaterial) || String(item.producto),
-        CambioDePrecio: "Falso", // 3. Enviamos el booleano como texto
-        NumeroDeFactura: "",
-        FechaYHora: formattedDateTime,
-        Cliente: String(cliente),
-        NombreDelCliente: String(cliente)
-      };
-    });
+    const deleteDetalles = db.prepare(`DELETE FROM DETALLE_PREVENTA WHERE preventa_id = ?`);
+    
+    const insertDetalle = db.prepare(`
+      INSERT INTO DETALLE_PREVENTA (id, preventa_id, producto, cantidad, precio_unitario, subtotal)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
 
-    const detalleAppSheetResult = await callAppSheetAPIVerbose("DETALLE_PREVENTA", "Add", dRows);
-    if (!detalleAppSheetResult.ok) {
-      console.error("AppSheet API DETALLE_PREVENTA Add failed:", detalleAppSheetResult.errorText);
-    }    // Retrieve old detail IDs from SQLite so we can delete them from AppSheet
     const oldDetails = db.prepare('SELECT id FROM DETALLE_PREVENTA WHERE preventa_id = ?').all(id);
 
-    // Perform inside transaction locally
     const executeTransaction = db.transaction(() => {
       updatePreventa.run(cliente, telefono || '', fecha, totalCalculado, estado || 'Pendiente', notas || '', id);
       deleteDetalles.run(id);
@@ -740,13 +659,12 @@ app.get('/api/preventas/:id', (req, res) => {
         const item_id = 'det-' + Math.random().toString(36).substring(2, 10);
         const subtotal = item.cantidad * item.precio_unitario;
         insertDetalle.run(item_id, id, item.producto, item.cantidad, item.precio_unitario, subtotal);
-        item.id = item_id; // Track the new generated ID
+        item.id = item_id; 
       }
     });
 
     executeTransaction();
 
-    // Now update AppSheet cloud tables
     const pRow = {
       IDTransacion: id,
       IDcliente: cliente,
@@ -757,13 +675,11 @@ app.get('/api/preventas/:id', (req, res) => {
       Notas: notas || ''
     };
 
-    // Call Edit action on AppSheet for Preventa
     const preventaAppSheetResult = await callAppSheetAPIVerbose("Preventa", "Edit", [pRow]);
     if (!preventaAppSheetResult.ok) {
       console.error("AppSheet API Preventa Edit failed:", preventaAppSheetResult.errorText);
     }
 
-    // Delete old details on AppSheet
     let deleteAppSheetResult = { ok: true, errorText: null };
     if (oldDetails.length > 0) {
       const deleteRows = oldDetails.map(d => ({ IDDETALLE: String(d.id) }));
@@ -773,11 +689,9 @@ app.get('/api/preventas/:id', (req, res) => {
       }
     }
 
-    // Pequeña espera para que Google Sheets/AppSheet reflejen los cambios en el padre
-    // (edición y borrado del detalle previo) antes de agregar el detalle nuevo.
-    await wait(1500);
+    // Esperamos 4 segundos para asegurar que AppSheet haya procesado los cambios del "Padre"
+    await wait(4000); 
 
-    // Add new details on AppSheet
     const nowPut = new Date();
     const formattedDateTimePut = `${String(nowPut.getDate()).padStart(2, '0')}/${String(nowPut.getMonth()+1).padStart(2, '0')}/${nowPut.getFullYear()} ${String(nowPut.getHours()).padStart(2, '0')}:${String(nowPut.getMinutes()).padStart(2, '0')}:${String(nowPut.getSeconds()).padStart(2, '0')}`;
 
@@ -785,20 +699,25 @@ app.get('/api/preventas/:id', (req, res) => {
 
     const dRows = detalles.map(item => {
       const stockRow = getStockShortTextPut.get(item.producto);
+      
+      const cantidadStr = String(item.cantidad).replace('.', ',');
+      const precioStr = String(item.precio_unitario).replace('.', ',');
+      const totalLineaStr = String(item.cantidad * item.precio_unitario).replace('.', ',');
+
       return {
         IDDETALLE: String(item.id),
         IDTransaccion: String(id),
-        ARTICULO: item.producto,
-        CANTIDAD: item.cantidad,
-        PRECIO: item.precio_unitario,
-        IMPUESTO: 0,
-        'TOTAL LINEA': item.cantidad * item.precio_unitario,
-        TextoBreve: (stockRow && stockRow.TextoBreveDelMaterial) || item.producto,
-        CambioDePrecio: false,
-        NumeroDeFactura: '',
+        ARTICULO: String(item.producto),
+        CANTIDAD: cantidadStr,
+        PRECIO: precioStr,
+        IMPUESTO: "0",
+        'TOTAL LINEA': totalLineaStr,
+        TextoBreve: (stockRow && stockRow.TextoBreveDelMaterial) || String(item.producto),
+        CambioDePrecio: "Falso",
+        NumeroDeFactura: "",
         FechaYHora: formattedDateTimePut,
-        Cliente: cliente,
-        NombreDelCliente: cliente
+        Cliente: String(cliente),
+        NombreDelCliente: String(cliente)
       };
     });
 
@@ -807,95 +726,23 @@ app.get('/api/preventas/:id', (req, res) => {
       console.error("AppSheet API DETALLE_PREVENTA Add failed:", detalleAppSheetResult.errorText);
     }
 
-    // Fetch and return the updated preventa
     const updatedPreventa = db.prepare('SELECT * FROM Preventa WHERE id = ?').get(id);
     const updatedDetails = db.prepare('SELECT * FROM DETALLE_PREVENTA WHERE preventa_id = ?').all(id);
 
     const appsheet_warnings = [];
-    if (!preventaAppSheetResult.ok) appsheet_warnings.push(`Preventa no se sincronizó con AppSheet: ${preventaAppSheetResult.errorText}`);
-    if (!deleteAppSheetResult.ok) appsheet_warnings.push(`No se pudo borrar el detalle anterior en AppSheet: ${deleteAppSheetResult.errorText}`);
-    if (!detalleAppSheetResult.ok) appsheet_warnings.push(`Detalle no se sincronizó con AppSheet: ${detalleAppSheetResult.errorText}`);
+    if (!preventaAppSheetResult.ok) appsheet_warnings.push(`Preventa editada no se sincronizó con AppSheet: ${preventaAppSheetResult.errorText}`);
+    if (!detalleAppSheetResult.ok) appsheet_warnings.push(`Detalle nuevo no se sincronizó con AppSheet: ${detalleAppSheetResult.errorText}`);
+    if (!deleteAppSheetResult.ok) appsheet_warnings.push(`Fallo al borrar detalle viejo en AppSheet: ${deleteAppSheetResult.errorText}`);
 
     res.json({ ...updatedPreventa, detalles: updatedDetails, ...(appsheet_warnings.length ? { appsheet_warnings } : {}) });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al actualizar la preventa: ' + err.message });
   }
 });
 
-// DELETE /api/preventas/:id - Delete a pre-sale
-app.delete('/api/preventas/:id', async (req, res) => {
-  const id = req.params.id;
-  try {
-    const existing = db.prepare('SELECT id FROM Preventa WHERE id = ?').get(id);
-    if (!existing) {
-      return res.status(404).json({ error: 'Preventa no encontrada' });
-    }
-
-    // Retrieve old detail IDs from SQLite so we can delete them from AppSheet
-    const oldDetails = db.prepare('SELECT id FROM DETALLE_PREVENTA WHERE preventa_id = ?').all(id);
-
-    // Cascade delete is active due to FOREIGN KEY ... ON DELETE CASCADE locally
-    db.prepare('DELETE FROM Preventa WHERE id = ?').run(id);
-
-    // Update AppSheet Cloud Tables
-    // Delete associated details first on AppSheet
-    if (oldDetails.length > 0) {
-      const deleteRows = oldDetails.map(d => ({ IDDETALLE: String(d.id) }));
-      await callAppSheetAPI("DETALLE_PREVENTA", "Delete", deleteRows).catch(err => {
-        console.error("AppSheet API DETALLE_PREVENTA Delete failed:", err.message);
-      });
-    }
-
-    // Delete parent row from AppSheet
-    await callAppSheetAPI("Preventa", "Delete", [{ IDTransacion: String(id) }]).catch(err => {
-      console.error("AppSheet API Preventa Delete failed:", err.message);
-    });
-
-    res.json({ message: 'Preventa eliminada con éxito', id });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Error al eliminar la preventa: ' + err.message });
-  }
-});
-
-// Mock AppSheet Status and Schema API
-app.get('/api/appsheet-status', (req, res) => {
-  res.json({
-    app_name: "App Sheep",
-    platform: "AppSheet (Google Cloud)",
-    sync_status: "Conectado",
-    last_sync: new Date().toISOString(),
-    tables_mapped: [
-      {
-        sheet_name: "Preventa",
-        columns: ["IDTransacion", "FECHA", "IDcliente", "total", "Estado", "Notas"],
-        appsheet_type: "Parent Table (Key: IDTransacion)"
-      },
-      {
-        sheet_name: "DETALLE_PREVENTA",
-        columns: ["IDDETALLE", "IDTransaccion", "ARTICULO", "CANTIDAD", "PRECIO", "TOTAL LINEA"],
-        appsheet_type: "Child Table (Key: IDDETALLE, Ref: IDTransaccion -> Preventa)"
-      }
-    ]
-  });
-});
-
-app.post('/api/appsheet-sync', async (req, res) => {
-  try {
-    await syncFromAppSheetToSQLite();
-    res.json({
-      success: true,
-      message: "Sincronización bidireccional exitosa con las Hojas de Cálculo de Google (App Sheep).",
-      timestamp: new Date().toISOString()
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: "Error de sincronización: " + err.message });
-  }
-});
-
-// Start server
+// Listener del servidor
 app.listen(port, () => {
-  console.log(`Server is running at http://localhost:${port}`);
+  console.log(`Servidor iniciado en el puerto ${port}`);
 });

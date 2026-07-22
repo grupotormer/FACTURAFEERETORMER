@@ -684,16 +684,16 @@ function generateDetalleId() {
   return Math.random().toString(36).substring(2, 10);
 }
 
-// Helper to format date in format MM/DD/YYYY HH:MM:SS
+// Helper to format date in format DD/MM/YYYY HH:MM:SS
 function formatAppSheetDate(date) {
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
   const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
   const yyyy = date.getFullYear();
   const hh = String(date.getHours()).padStart(2, '0');
   const min = String(date.getMinutes()).padStart(2, '0');
   const ss = String(date.getSeconds()).padStart(2, '0');
 
-  return `${mm}/${dd}/${yyyy} ${hh}:${min}:${ss}`;
+  return `${dd}/${mm}/${yyyy} ${hh}:${min}:${ss}`;
 }
 
 // Configuration for printing tickets
@@ -854,7 +854,8 @@ async function submitPreventa() {
       Cliente: state.selectedClient.IDCliente,
       NombreDelCliente: state.selectedClient.NombreCliente,
       FechaYHora: dateFormatted,
-      TotalPreventaCount: state.calculatedTotals.total
+      TotalPreventaCount: state.calculatedTotals.total,
+      pdf_Bytes: "JVBERi0xLjMKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFCb3ggWzAgMCA1OTUgODQyXQovUmVzb3VyY2VzIDw8Pj4KL0NvbnRlbnRzIDQgMCBSCj4+CmVuZG9iago0IDAgb2JqCjw8Ci9MZW5ndGggMjQKPj4Kc3RyZWFtCkJULyBGMSAxMiBUZidIZWxsbycgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagp0cmFpbGVyCjw8Ci9TaXplIDUKL1Jvb3QgMSAwIFIKPj4KJSVFT0Y="
     };
   });
 

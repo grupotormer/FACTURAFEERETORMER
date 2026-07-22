@@ -576,36 +576,53 @@ function updateSubmitButtonState() {
 
 // Helper to generate transaction ID matching standard format: e.g., 2026-01-M1P505-XXXXX
 async function generateTransactionId() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const prefix = "2026-01-M1P505-";
+  let maxNum = 0;
 
-  // Custom prefix matching TormerSystem samples (e.g., 2026-01-M1P505)
-  const prefix = `${year}-${month}-M1P505`;
-
+  // 1. Scan local storage fallback cache
   try {
-    const preventas = await fetchTableData('Preventa');
-    let maxNum = 0;
-    if (Array.isArray(preventas)) {
-      preventas.forEach(row => {
-        const id = row.IDTransacion || row.IDTransaccion || '';
-        const parts = id.split('-');
-        if (parts.length > 0) {
-          const lastPart = parts[parts.length - 1];
-          const num = parseInt(lastPart, 10);
+    const raw = localStorage.getItem('appsheep_preventa');
+    const localPreventas = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(localPreventas)) {
+      localPreventas.forEach(p => {
+        const id = p.id || '';
+        if (id && id.startsWith(prefix)) {
+          const suffix = id.substring(prefix.length);
+          const num = parseInt(suffix, 10);
           if (!isNaN(num) && num > maxNum) {
             maxNum = num;
           }
         }
       });
     }
-    const nextNum = maxNum + 1;
-    return `${prefix}-${nextNum}`;
   } catch (err) {
-    console.error('Error generating correlative ID, falling back to random:', err);
-    const randNum = Math.floor(1000 + Math.random() * 9000); // 4-digit unique
-    return `${prefix}-${randNum}`;
+    console.warn('Error parsing local storage preventas:', err);
   }
+
+  // 2. Scan AppSheet Preventa table
+  try {
+    const preventas = await fetchTableData('Preventa');
+    if (Array.isArray(preventas)) {
+      preventas.forEach(row => {
+        const id = row.IDTransacion || row.IDTransaccion || row.id || '';
+        if (id && id.startsWith(prefix)) {
+          const suffix = id.substring(prefix.length);
+          const num = parseInt(suffix, 10);
+          if (!isNaN(num) && num > maxNum) {
+            maxNum = num;
+          }
+        }
+      });
+    }
+  } catch (err) {
+    console.warn('Error fetching from AppSheet table for correlative ID, using local only:', err);
+  }
+
+  if (maxNum === 0) {
+    maxNum = 331;
+  }
+  const nextNum = maxNum + 1;
+  return `${prefix}${nextNum}`;
 }
 
 // Helper to generate Detalle UUID/hash

@@ -167,19 +167,55 @@ function showToast(message, type = 'success') {
   }, 4000);
 }
 
-// Fetch Initial Data from AppSheet API
+// Fetch Initial Data from AppSheet API with Local API as Primary
 async function fetchInitialData() {
-  showLoading('Conectando a AppSheet', 'Obteniendo Catálogo y Clientes...');
+  showLoading('Conectando...', 'Obteniendo Catálogo y Clientes...');
   syncIcon.classList.add('animate-spin');
   syncBtn.disabled = true;
 
   try {
-    // 1. Fetch CLIENTES
-    const clientsPromise = fetchTableData('CLIENTES');
-    // 2. Fetch stock
-    const productsPromise = fetchTableData('stock');
+    let clientsRes, productsRes;
+    try {
+      // Intentamos con la API del servidor local primero
+      const [cResponse, pResponse] = await Promise.all([
+        fetch('/api/clientes'),
+        fetch('/api/productos')
+      ]);
+      if (cResponse.ok && pResponse.ok) {
+        const cData = await cResponse.json();
+        const pData = await pResponse.json();
 
-    const [clientsRes, productsRes] = await Promise.all([clientsPromise, productsPromise]);
+        // Mapear el formato del servidor al formato esperado por el frontend
+        clientsRes = cData.map(c => ({
+          IDCliente: c.id,
+          NombreCliente: c.nombre,
+          Telefono: c.telefono,
+          Direccion: '',
+          NIT: c.id,
+          Email: ''
+        }));
+
+        productsRes = pData.map(p => ({
+          Material: p.material,
+          TextoBreveDelMaterial: p.TextoBreveDelMaterial,
+          Precio: p.precio,
+          Stock: 999,
+          'Categoría': 'General',
+          Marca: 'Genérico',
+          concat: p.concat
+        }));
+      } else {
+        throw new Error('Servidor local respondió con error');
+      }
+    } catch (apiErr) {
+      console.warn("No se pudo conectar al servidor local para cargar datos, usando AppSheet directo:", apiErr.message);
+      // Fallback a AppSheet directamente
+      const clientsPromise = fetchTableData('CLIENTES');
+      const productsPromise = fetchTableData('stock');
+      const [cRes, pRes] = await Promise.all([clientsPromise, productsPromise]);
+      clientsRes = cRes;
+      productsRes = pRes;
+    }
 
     state.clients = clientsRes || [];
     state.products = productsRes || [];
@@ -192,10 +228,10 @@ async function fetchInitialData() {
     renderCatalog();
     renderCart();
 
-    showToast('Datos actualizados de la nube', 'success');
+    showToast('Datos actualizados', 'success');
   } catch (error) {
     console.error('Error fetching initial data:', error);
-    showToast('Error al conectar con la base de datos de AppSheet', 'error');
+    showToast('Error al conectar con la base de datos', 'error');
   } finally {
     hideLoading();
     syncIcon.classList.remove('animate-spin');
@@ -806,87 +842,197 @@ function printTicket(transactionId, dateFormatted, preventaRow, detalleRows, cli
   }, 150);
 }
 
-// Submit Preventa to AppSheet via API v2
+// Submit Preventa with API v1 (Backend server) primary, and direct AppSheet fallback
 async function submitPreventa() {
   if (!state.selectedClient || state.cart.length === 0) {
     showToast('Por favor, selecciona un cliente y productos.', 'warning');
     return;
   }
 
-  showLoading('Procesando Preventa', 'Enviando información del pedido a AppSheet...');
+  showLoading('Procesando Preventa', 'Enviando información del pedido...');
 
-  const transactionId = await generateTransactionId();
   const dateFormatted = formatAppSheetDate(new Date());
   const notasText = preventaNotas.value.trim();
 
-  // Create Header Object
-  const preventaRow = {
-    IDTransacion: transactionId,
-    FECHA: dateFormatted,
-    IDcliente: state.selectedClient.IDCliente,
-    subtotal: state.calculatedTotals.subtotal,
-    total: state.calculatedTotals.total,
-    PrecioSinIva: state.calculatedTotals.subtotal,
-    Iva: state.calculatedTotals.iva,
-    NombreDelCliente: state.selectedClient.NombreCliente,
-    Direccion: state.selectedClient.Direccion || '',
-    Notas: notasText,
-    Estado: 'Pendiente'
+  // Preparar payload para la API local /api/preventas
+  const filteredDetails = state.cart.map(item => ({
+    producto: item.Material,
+    cantidad: item.quantity,
+    precio_unitario: item.price
+  }));
+
+  const payload = {
+    cliente: state.selectedClient.NombreCliente,
+    telefono: state.selectedClient.Telefono || '',
+    fecha: new Date().toISOString().split('T')[0],
+    estado: 'Pendiente',
+    notas: notasText,
+    detalles: filteredDetails
   };
 
-  // Create Details Rows array
-  const detalleRows = state.cart.map((item, index) => {
-    const itemTotal = item.price * item.quantity;
-    const itemSubtotal = itemTotal / 1.13;
-    const itemIva = itemTotal - itemSubtotal;
-
-    return {
-      IDDETALLE: generateDetalleId(),
-      IDTransaccion: transactionId,
-      CANTIDAD: String(item.quantity),
-      ARTICULO: item.Material,
-      PRECIO: String(item.price),
-      IMPUESTO: itemIva.toFixed(6),
-      'TOTAL LINEA': itemTotal.toFixed(2),
-      TextoBreve: item.TextoBreveDelMaterial,
-      PRECIOSS: String(item.price),
-      CambioDePrecio: '0',
-      Cliente: state.selectedClient.IDCliente,
-      NombreDelCliente: state.selectedClient.NombreCliente,
-      FechaYHora: dateFormatted,
-      TotalPreventaCount: state.calculatedTotals.total,
-      pdf_Bytes: "JVBERi0xLjMKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFCb3ggWzAgMCA1OTUgODQyXQovUmVzb3VyY2VzIDw8Pj4KL0NvbnRlbnRzIDQgMCBSCj4+CmVuZG9iago0IDAgb2JqCjw8Ci9MZW5ndGggMjQKPj4Kc3RyZWFtCkJULyBGMSAxMiBUZidIZWxsbycgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagp0cmFpbGVyCjw8Ci9TaXplIDUKL1Jvb3QgMSAwIFIKPj4KJSVFT0Y="
-    };
-  });
-
   try {
-    // 1. Add Preventa Header
-    const preventaRes = await addTableRow('Preventa', [preventaRow]);
+    // Intentar primero a través del servidor backend local
+    const response = await fetch('/api/preventas', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
 
-    // 2. Add Detalle Preventa Items
-    const detalleRes = await addTableRow('DETALLE_PREVENTA', detalleRows);
+    if (response.ok) {
+      const savedPreventa = await response.json();
+      const transactionId = savedPreventa.id || savedPreventa.IDTransacion;
 
-    // 3. Force AppSheet to recalculate formulas by Editing the parent row
-    await editTableRow('Preventa', [{ IDTransacion: transactionId }]);
+      showToast(`¡Preventa ${transactionId} procesada con éxito!`, 'success');
 
-    showToast(`¡Preventa ${transactionId} procesada con éxito!`, 'success');
+      if (savedPreventa.appsheet_warnings && savedPreventa.appsheet_warnings.length > 0) {
+        savedPreventa.appsheet_warnings.forEach(w => showToast('AppSheet: ' + w, 'warning'));
+      }
 
-    // Imprimir ticket de preventa
-    const clientPhone = state.selectedClient.Telefono || 'SIN CONTACTO';
-    printTicket(transactionId, dateFormatted, preventaRow, detalleRows, clientPhone);
+      // Preparar estructura para ticket
+      const ticketPreventaRow = {
+        NombreDelCliente: state.selectedClient.NombreCliente,
+        total: String(savedPreventa.total || savedPreventa.totalCalculado)
+      };
 
-    // Reset state & Clear cart
-    state.cart = [];
-    preventaNotas.value = '';
-    clearSelectedClient();
+      const ticketDetalleRows = (savedPreventa.detalles || []).map(d => ({
+        ARTICULO: d.producto,
+        CANTIDAD: d.cantidad,
+        PRECIO: d.precio_unitario,
+        'TOTAL LINEA': d.subtotal,
+        TextoBreve: d.producto
+      }));
 
-    // Refresh stock list from AppSheet to get fresh numbers
-    await fetchInitialData();
+      // Imprimir ticket de preventa
+      const clientPhone = state.selectedClient.Telefono || 'SIN CONTACTO';
+      printTicket(transactionId, dateFormatted, ticketPreventaRow, ticketDetalleRows, clientPhone);
 
-  } catch (error) {
-    console.error('Error submitting preventa:', error);
-    showToast('Ocurrió un error al registrar la preventa en AppSheet. Inténtalo de nuevo.', 'error');
-    hideLoading();
+      // Reset state & Clear cart
+      state.cart = [];
+      preventaNotas.value = '';
+      clearSelectedClient();
+
+      // Refresh data
+      await fetchInitialData();
+      return;
+    } else {
+      const errData = await response.json();
+      throw new Error(errData.error || 'Error de respuesta en el servidor backend.');
+    }
+  } catch (err) {
+    console.warn("Fallo el envío por backend, usando fallback directo a AppSheet y localStorage:", err.message);
+
+    // FALLBACK: Flujo 100% frontend
+    try {
+      const transactionId = await generateTransactionId();
+
+      const totalCalculado = state.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const calculatedSubtotal = totalCalculado / 1.13;
+      const calculatedIva = totalCalculado - calculatedSubtotal;
+
+      const preventaRow = {
+        IDTransacion: transactionId,
+        FECHA: dateFormatted,
+        IDcliente: state.selectedClient.IDCliente || state.selectedClient.NombreCliente,
+        subtotal: calculatedSubtotal.toFixed(6),
+        total: totalCalculado.toFixed(2),
+        PrecioSinIva: calculatedSubtotal.toFixed(6),
+        Iva: calculatedIva.toFixed(6),
+        NombreDelCliente: state.selectedClient.NombreCliente,
+        Direccion: state.selectedClient.Direccion || '',
+        Notas: notasText,
+        Estado: 'Pendiente'
+      };
+
+      const detalleRows = state.cart.map((item, index) => {
+        const itemTotal = item.price * item.quantity;
+        const itemSubtotal = itemTotal / 1.13;
+        const itemIva = itemTotal - itemSubtotal;
+
+        return {
+          IDDETALLE: generateDetalleId(),
+          IDTransaccion: transactionId,
+          CANTIDAD: String(item.quantity),
+          ARTICULO: item.Material,
+          PRECIO: String(item.price),
+          IMPUESTO: itemIva.toFixed(6),
+          'TOTAL LINEA': itemTotal.toFixed(2),
+          TextoBreve: item.TextoBreveDelMaterial,
+          PRECIOSS: String(item.price),
+          CambioDePrecio: '0',
+          Cliente: state.selectedClient.IDCliente || state.selectedClient.NombreCliente,
+          NombreDelCliente: state.selectedClient.NombreCliente,
+          FechaYHora: dateFormatted,
+          TotalPreventaCount: totalCalculado.toFixed(2),
+          pdf_Bytes: "JVBERi0xLjMKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFCb3ggWzAgMCA1OTUgODQyXQovUmVzb3VyY2VzIDw8Pj4KL0NvbnRlbnRzIDQgMCBSCj4+CmVuZG9iago0IDAgb2JqCjw8Ci9MZW5ndGggMjQKPj4Kc3RyZWFtCkJULyBGMSAxMiBUZidIZWxsbycgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagp0cmFpbGVyCjw8Ci9TaXplIDUKL1Jvb3QgMSAwIFIKPj4KJSVFT0Y="
+        };
+      });
+
+      // Guardado local en localStorage para persistencia offline
+      const localPreventas = [];
+      try {
+        const raw = localStorage.getItem('appsheep_preventa');
+        if (raw) localPreventas.push(...JSON.parse(raw));
+      } catch (e) {}
+
+      const localDetalles = [];
+      try {
+        const raw = localStorage.getItem('appsheep_detalle');
+        if (raw) localDetalles.push(...JSON.parse(raw));
+      } catch (e) {}
+
+      localPreventas.push({
+        id: transactionId,
+        cliente: state.selectedClient.NombreCliente,
+        telefono: state.selectedClient.Telefono || '',
+        fecha: new Date().toISOString().split('T')[0],
+        total: totalCalculado,
+        estado: 'Pendiente',
+        notas: notasText
+      });
+
+      detalleRows.forEach(d => {
+        localDetalles.push({
+          id: d.IDDETALLE,
+          preventa_id: transactionId,
+          producto: d.ARTICULO,
+          cantidad: parseFloat(d.CANTIDAD),
+          precio_unitario: parseFloat(d.PRECIO),
+          subtotal: parseFloat(d['TOTAL LINEA'])
+        });
+      });
+
+      localStorage.setItem('appsheep_preventa', JSON.stringify(localPreventas));
+      localStorage.setItem('appsheep_detalle', JSON.stringify(localDetalles));
+
+      // 1. Add Preventa Header to AppSheet
+      await addTableRow('Preventa', [preventaRow]);
+
+      // 2. Add Detalle Preventa Items to AppSheet
+      await addTableRow('DETALLE_PREVENTA', detalleRows);
+
+      // 3. Force AppSheet to recalculate formulas by Editing the parent row
+      await editTableRow('Preventa', [{ IDTransacion: transactionId }]);
+
+      showToast(`¡Preventa ${transactionId} procesada con éxito! (Guardado local y directo en la nube)`, 'success');
+
+      // Imprimir ticket de preventa
+      const clientPhone = state.selectedClient.Telefono || 'SIN CONTACTO';
+      printTicket(transactionId, dateFormatted, preventaRow, detalleRows, clientPhone);
+
+      // Reset state & Clear cart
+      state.cart = [];
+      preventaNotas.value = '';
+      clearSelectedClient();
+
+      // Refresh stock list
+      await fetchInitialData();
+    } catch (fallbackErr) {
+      console.error('Error total en submit:', fallbackErr);
+      showToast('Ocurrió un error al registrar la preventa. Inténtalo de nuevo.', 'error');
+      hideLoading();
+    }
   }
 }
 

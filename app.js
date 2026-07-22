@@ -382,7 +382,7 @@ function renderCatalog() {
             <span class="italic text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded">${product.Marca || 'Genérico'}</span>
           </div>
         </td>
-        <td class="px-4 py-3 text-slate-500 text-xs">
+        <td class="px-4 py-3 text-slate-500 text-xs hidden sm:table-cell">
           ${product['Categoría'] || 'General'}
         </td>
         <td class="px-4 py-3 text-right">

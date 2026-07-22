@@ -601,9 +601,9 @@ app.post('/api/preventas', async (req, res) => {
     const dRows = detalles.map(item => {
       const stockRow = getStockShortText.get(item.producto);
       
-      const cantidadStr = String(item.cantidad).replace('.', ',');
-      const precioStr = String(item.precio_unitario).replace('.', ',');
-      const totalLineaStr = String(item.cantidad * item.precio_unitario).replace('.', ',');
+      const cantidadStr = String(item.cantidad);
+      const precioStr = String(item.precio_unitario);
+      const totalLineaStr = String(item.cantidad * item.precio_unitario);
 
       return {
         IDDETALLE: String(item.id),
@@ -614,11 +614,13 @@ app.post('/api/preventas', async (req, res) => {
         IMPUESTO: "0",
         'TOTAL LINEA': totalLineaStr,
         TextoBreve: (stockRow && stockRow.TextoBreveDelMaterial) || String(item.producto),
-        CambioDePrecio: "Falso",
+        PRECIOSS: precioStr,
+        CambioDePrecio: "0",
         NumeroDeFactura: "",
         FechaYHora: formattedDateTime,
         Cliente: String(cliente),
         NombreDelCliente: String(cliente),
+        TotalPreventaCount: String(totalCalculado),
         pdf_Bytes: "JVBERi0xLjMKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFCb3ggWzAgMCA1OTUgODQyXQovUmVzb3VyY2VzIDw8Pj4KL0NvbnRlbnRzIDQgMCBSCj4+CmVuZG9iago0IDAgb2JqCjw8Ci9MZW5ndGggMjQKPj4Kc3RyZWFtCkJULyBGMSAxMiBUZidIZWxsbycgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagp0cmFpbGVyCjw8Ci9TaXplIDUKL1Jvb3QgMSAwIFIKPj4KJSVFT0Y="
       };
     });
@@ -723,9 +725,9 @@ app.put('/api/preventas/:id', async (req, res) => {
     const dRows = detalles.map(item => {
       const stockRow = getStockShortTextPut.get(item.producto);
       
-      const cantidadStr = String(item.cantidad).replace('.', ',');
-      const precioStr = String(item.precio_unitario).replace('.', ',');
-      const totalLineaStr = String(item.cantidad * item.precio_unitario).replace('.', ',');
+      const cantidadStr = String(item.cantidad);
+      const precioStr = String(item.precio_unitario);
+      const totalLineaStr = String(item.cantidad * item.precio_unitario);
 
       return {
         IDDETALLE: String(item.id),
@@ -736,11 +738,13 @@ app.put('/api/preventas/:id', async (req, res) => {
         IMPUESTO: "0",
         'TOTAL LINEA': totalLineaStr,
         TextoBreve: (stockRow && stockRow.TextoBreveDelMaterial) || String(item.producto),
-        CambioDePrecio: "Falso",
+        PRECIOSS: precioStr,
+        CambioDePrecio: "0",
         NumeroDeFactura: "",
         FechaYHora: formattedDateTimePut,
         Cliente: String(cliente),
         NombreDelCliente: String(cliente),
+        TotalPreventaCount: String(totalCalculado),
         pdf_Bytes: "JVBERi0xLjMKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFCb3ggWzAgMCA1OTUgODQyXQovUmVzb3VyY2VzIDw8Pj4KL0NvbnRlbnRzIDQgMCBSCj4+CmVuZG9iago0IDAgb2JqCjw8Ci9MZW5ndGggMjQKPj4Kc3RyZWFtCkJULyBGMSAxMiBUZidIZWxsbycgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagp0cmFpbGVyCjw8Ci9TaXplIDUKL1Jvb3QgMSAwIFIKPj4KJSVFT0Y="
       };
     });

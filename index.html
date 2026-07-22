@@ -692,8 +692,8 @@
             </div>
 
             <!-- Dynamic Items Table -->
-            <div class="border border-slate-700 rounded-xl overflow-hidden bg-slate-900/30">
-              <table class="w-full text-left">
+            <div class="border border-slate-700 rounded-xl overflow-x-auto bg-slate-900/30">
+              <table class="w-full text-left min-w-[500px] sm:min-w-full">
                 <thead>
                   <tr class="bg-slate-900 border-b border-slate-700 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
                     <th class="py-2 px-4 w-1/2">Producto *</th>
@@ -801,7 +801,7 @@
       </div>
 
       <!-- Action Buttons Footer -->
-      <div class="flex items-center justify-end gap-3 p-5 border-t border-slate-700 bg-slate-800/30">
+      <div class="flex flex-wrap items-center justify-center sm:justify-end gap-3 p-5 border-t border-slate-700 bg-slate-800/30">
         <button type="button" onclick="closeFormModal()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors">
           Cancelar
         </button>
@@ -1023,7 +1023,7 @@
       <div class="overflow-y-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 p-5">
 
         <!-- Product Grid (8/12) -->
-        <div class="lg:col-span-8">
+        <div class="lg:col-span-8 order-last lg:order-none">
           <div id="catalog-grid" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
             <!-- Product cards rendered dynamically -->
           </div>
@@ -2037,7 +2037,7 @@
               </div>
             </div>
 
-            <div id="product-panel-${rowIndex}" class="hidden absolute left-0 md:w-[500px] min-w-[450px] mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 p-2 max-h-[350px] flex flex-col" onclick="event.stopPropagation()">
+            <div id="product-panel-${rowIndex}" class="hidden absolute left-0 w-72 sm:w-[500px] sm:min-w-[450px] mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 p-2 max-h-[350px] flex flex-col" onclick="event.stopPropagation()">
               <div id="product-options-${rowIndex}" class="overflow-y-auto flex-1 space-y-0.5 max-h-80">
                 <!-- Filter options -->
               </div>

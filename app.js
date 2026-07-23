@@ -474,22 +474,6 @@ window.removeFromCart = function(material) {
   renderCatalog();
 };
 
-// Update item price in cart and dynamically refresh totals
-window.updateCartPrice = function(material, value) {
-  const item = state.cart.find(it => it.Material === material);
-  if (!item) return;
-  const newPrice = parseFloat(value) || 0.0;
-  item.price = newPrice;
-
-  // Update line total in DOM instantly
-  const lineTotalEl = document.getElementById(`line-total-${material}`);
-  if (lineTotalEl) {
-    lineTotalEl.textContent = `$${(newPrice * item.quantity).toFixed(2)}`;
-  }
-
-  recalculateTotals();
-};
-
 // Render Cart Component & Recalculate Totals
 function renderCart() {
   cartItemsContainer.innerHTML = '';
@@ -533,13 +517,9 @@ function renderCart() {
               +
             </button>
           </div>
-          <div class="text-right flex flex-col items-end">
-            <div class="flex items-center gap-1">
-              <span class="text-xs text-slate-400">$</span>
-              <input type="number" value="${item.price}" min="0" step="any" oninput="updateCartPrice('${item.Material}', this.value)" class="w-20 text-right px-1.5 py-0.5 bg-white border border-slate-200 rounded text-xs font-semibold text-slate-800 focus:outline-none focus:border-primary-500 transition-all">
-              <span class="text-[10px] text-slate-400">c/u</span>
-            </div>
-            <span class="font-bold text-slate-900 text-sm mt-0.5" id="line-total-${item.Material}">$${itemTotal.toFixed(2)}</span>
+          <div class="text-right">
+            <span class="text-xs text-slate-400 block">$${item.price.toFixed(4)} c/u</span>
+            <span class="font-bold text-slate-900 text-sm">$${itemTotal.toFixed(2)}</span>
           </div>
         </div>
       `;

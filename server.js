@@ -503,9 +503,11 @@ app.post('/api/preventas', async (req, res) => {
     }, 0);
 
     const prefix = "2026-01-M1P505-";
-    const allPreventas = db.prepare('SELECT id FROM Preventa').all();
     let maxNum = 0;
-    for (const p of allPreventas) {
+
+    // Scan local SQLite database
+    const allPreventasLocal = db.prepare('SELECT id FROM Preventa').all();
+    for (const p of allPreventasLocal) {
       if (p.id && p.id.startsWith(prefix)) {
         const suffix = p.id.substring(prefix.length);
         const num = parseInt(suffix, 10);
@@ -514,6 +516,26 @@ app.post('/api/preventas', async (req, res) => {
         }
       }
     }
+
+    // Scan AppSheet Preventa table
+    try {
+      const preventasFromAppSheet = await callAppSheetAPI("Preventa", "Find");
+      if (Array.isArray(preventasFromAppSheet)) {
+        for (const p of preventasFromAppSheet) {
+          const id = p.IDTransacion || p.idtransacion || p.id || '';
+          if (id && id.startsWith(prefix)) {
+            const suffix = id.substring(prefix.length);
+            const num = parseInt(suffix, 10);
+            if (!isNaN(num) && num > maxNum) {
+              maxNum = num;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Could not fetch AppSheet preventas to determine max suffix, using SQLite max only:", err.message);
+    }
+
     if (maxNum === 0) {
       maxNum = 331; 
     }

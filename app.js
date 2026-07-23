@@ -896,16 +896,13 @@ async function submitPreventa() {
         total: String(savedPreventa.total || savedPreventa.totalCalculado)
       };
 
-      const ticketDetalleRows = (savedPreventa.detalles || []).map(d => {
-        const matchingProduct = state.products.find(p => p.Material === d.producto);
-        return {
-          ARTICULO: d.producto,
-          CANTIDAD: d.cantidad,
-          PRECIO: d.precio_unitario,
-          'TOTAL LINEA': d.subtotal,
-          TextoBreve: matchingProduct ? matchingProduct.TextoBreveDelMaterial : d.producto
-        };
-      });
+      const ticketDetalleRows = (savedPreventa.detalles || []).map(d => ({
+        ARTICULO: d.producto,
+        CANTIDAD: d.cantidad,
+        PRECIO: d.precio_unitario,
+        'TOTAL LINEA': d.subtotal,
+        TextoBreve: d.producto
+      }));
 
       // Imprimir ticket de preventa
       const clientPhone = state.selectedClient.Telefono || 'SIN CONTACTO';

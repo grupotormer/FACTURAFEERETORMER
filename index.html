@@ -1,19 +1,28 @@
 <!DOCTYPE html>
-<html lang="es" class="h-full bg-slate-900 text-slate-100">
+<html lang="es" class="h-full bg-slate-50 text-slate-800">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>App Sheep - Control de Preventas e Impresión de Tickets</title>
+  <title>TormerSystems.com</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="qrcode.min.js"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
       theme: {
         extend: {
           colors: {
+            primary: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+              800: '#075985',
+            },
             brand: {
               50: '#f0fdf4',
               100: '#dcfce7',
@@ -34,14 +43,14 @@
       height: 6px;
     }
     ::-webkit-scrollbar-track {
-      background: #1e293b;
+      background: #f1f5f9;
     }
     ::-webkit-scrollbar-thumb {
-      background: #475569;
+      background: #cbd5e1;
       border-radius: 4px;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: #64748b;
+      background: #94a3b8;
     }
 
     /* Print styles */
@@ -83,6 +92,22 @@
     #print-ticket-area {
       display: none;
     }
+
+    /* Collapsed sidebar styles */
+    .sidebar-collapsed {
+      width: 5.5rem !important; /* 88px */
+    }
+    .sidebar-collapsed .sidebar-text {
+      display: none !important;
+    }
+    .sidebar-collapsed .sidebar-header-text {
+      display: none !important;
+    }
+    .sidebar-collapsed nav button {
+      justify-content: center !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+    }
   </style>
 </head>
 <body class="h-full font-sans antialiased">
@@ -95,43 +120,37 @@
   <div id="app-container" class="min-h-screen flex flex-col">
     
     <!-- Top Navbar -->
-    <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-40">
+    <header class="bg-primary-700 text-white shadow-md sticky top-0 z-40">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-16">
           
           <!-- Logo & Brand -->
           <div class="flex items-center gap-3">
-            <div class="bg-gradient-to-tr from-emerald-500 to-green-600 p-2.5 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center">
-              <!-- Custom Sheep SVG -->
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 2a5 5 0 0 0-4.9 4c-.3 0-.6 0-.9.1A4 4 0 0 0 4 10c0 .4 0 .7.1 1.1A4.5 4.5 0 0 0 5 20h14a4.5 4.5 0 0 0 .9-8.9c.1-.4.1-.7.1-1.1a4 4 0 0 0-2.2-3.9c-.3-.1-.6-.1-.9-.1A5 5 0 0 0 12 2z"/>
-                <path d="M10 13v2"/>
-                <path d="M14 13v2"/>
-                <path d="M8 11.5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
-                <path d="M16 11.5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
-              </svg>
+            <div class="bg-primary-800 p-1.5 rounded-xl border border-primary-600 flex items-center justify-center">
+              <!-- Render Logoferre.png at the top of the web page -->
+              <img src="Logoferre.png" alt="Logo" class="w-10 h-10 object-contain">
             </div>
             <div>
               <div class="flex items-center gap-2">
-                <span class="text-xl font-bold tracking-tight text-white">APP SHEEP</span>
-                <span class="bg-emerald-500/10 text-emerald-400 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-emerald-500/20 flex items-center gap-1">
-                  <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
-                  AppSheet Link
+                <span class="text-xl font-bold tracking-tight text-white">Ferre Tormer</span>
+                <span class="bg-primary-600/50 text-white text-xs px-2.5 py-0.5 rounded-full font-semibold border border-primary-500 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
+                  Tormer Systems Link
                 </span>
               </div>
-              <p class="text-[10px] text-slate-400 font-medium tracking-wide uppercase">Sistema de Gestión de Preventas</p>
+              <p class="text-[10px] text-primary-200 font-medium tracking-wide uppercase">Sistema de gestion empresarial</p>
             </div>
           </div>
 
           <!-- Quick action & Connection Status -->
           <div class="flex items-center gap-4">
-            <button onclick="syncAppSheet()" class="flex items-center gap-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white px-3.5 py-2 rounded-lg border border-slate-600 text-sm font-medium transition-all" title="Sincronizar con AppSheet">
+            <button onclick="syncAppSheet()" class="flex items-center gap-2 bg-primary-600 hover:bg-primary-500 text-white px-3.5 py-2 rounded-lg border border-primary-500 text-sm font-medium transition-all shadow-inner" title="Sincronizar con AppSheet">
               <i data-lucide="refresh-cw" class="w-4 h-4" id="sync-icon"></i>
               <span class="hidden md:inline">Sincronizar</span>
             </button>
-            <div class="h-6 w-px bg-slate-700 hidden sm:block"></div>
-            <div class="items-center gap-2 text-sm text-slate-400 hidden sm:flex">
-              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <div class="h-6 w-px bg-primary-600 hidden sm:block"></div>
+            <div class="items-center gap-2 text-sm text-primary-100 hidden sm:flex">
+              <span class="w-2 h-2 rounded-full bg-green-400"></span>
               <span>API Conectada</span>
             </div>
           </div>
@@ -141,9 +160,49 @@
     </header>
 
     <!-- Main Content Area -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col lg:flex-row gap-8">
       
-      <!-- Statistics Dashboard Row -->
+      <!-- Sidebar (no-print) -->
+      <aside id="app-sidebar" class="w-full lg:w-80 flex-shrink-0 space-y-6 no-print transition-all duration-300">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-2">
+              <i data-lucide="menu" class="text-primary-600 w-5 h-5"></i>
+              <h3 class="text-base font-bold text-slate-850 sidebar-header-text">Navegación</h3>
+            </div>
+            <button onclick="toggleSidebar()" id="sidebar-toggle-btn" class="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors" title="Contraer / Expandir Sidebar">
+              <i data-lucide="chevron-left" class="w-4 h-4" id="sidebar-toggle-icon"></i>
+            </button>
+          </div>
+
+          <nav class="space-y-2">
+            <button onclick="switchTab('preventas')" id="nav-btn-preventas" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all bg-primary-600 text-white shadow-lg shadow-primary-600/15">
+              <i data-lucide="shopping-bag" class="w-5 h-5 flex-shrink-0"></i>
+              <span class="sidebar-text">PREVENTAS</span>
+            </button>
+            <button onclick="switchTab('template')" id="nav-btn-template" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent">
+              <i data-lucide="receipt" class="w-5 h-5 flex-shrink-0"></i>
+              <span class="sidebar-text">Témplate de ticket</span>
+            </button>
+            <button onclick="switchTab('productos')" id="nav-btn-productos" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent">
+              <i data-lucide="package" class="w-5 h-5 flex-shrink-0"></i>
+              <span class="sidebar-text">pruductos</span>
+            </button>
+            <button onclick="switchTab('clientes')" id="nav-btn-clientes" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent">
+              <i data-lucide="users" class="w-5 h-5 flex-shrink-0"></i>
+              <span class="sidebar-text">clientes</span>
+            </button>
+          </nav>
+        </div>
+      </aside>
+
+      <!-- Main Content Block -->
+      <div class="flex-1 min-w-0 space-y-8">
+
+        <!-- Tab 1: PREVENTAS -->
+        <div id="tab-view-preventas" class="space-y-8">
+
+        <!-- Statistics Dashboard Row -->
       <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
         
         <!-- Total Revenue -->
@@ -153,7 +212,7 @@
           </div>
           <div>
             <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Ingreso Total</p>
-            <h3 class="text-2xl font-bold text-white mt-1" id="stat-revenue">0.00 €</h3>
+            <h3 class="text-2xl font-bold text-white mt-1" id="stat-revenue">0.00 $</h3>
           </div>
         </div>
 
@@ -197,7 +256,7 @@
             <i data-lucide="database" class="w-6 h-6"></i>
           </div>
           <div>
-            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">App Sheep DB</p>
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Tormer Systems BD</p>
             <h3 class="text-sm font-bold text-emerald-400 mt-1 flex items-center gap-1.5">
               <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
               Sincronizado
@@ -223,7 +282,7 @@
             <!-- Search bar -->
             <div class="relative min-w-[200px] md:min-w-[240px]">
               <i data-lucide="search" class="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-400"></i>
-              <input type="text" id="search-input" onkeyup="filterAndRender()" placeholder="Buscar cliente..." class="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+              <input type="text" id="search-input" list="clientes-list" onkeyup="filterAndRender()" placeholder="Buscar cliente..." class="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
             </div>
 
             <!-- Filter select -->
@@ -236,8 +295,16 @@
               <i data-lucide="chevron-down" class="absolute right-3 top-3 h-4 w-4 text-slate-400 pointer-events-none"></i>
             </div>
 
-            <!-- Add Pre-sale Button -->
-            <button onclick="openCreateModal()" class="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-lg shadow-emerald-600/10 hover:shadow-emerald-500/20 transition-all">
+            <!-- Action Buttons -->
+            <button onclick="openClientCreateModal()" class="flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 px-3 py-2 rounded-xl text-xs font-semibold shadow-md transition-all">
+              <i data-lucide="user-plus" class="w-3.5 h-3.5 text-emerald-400"></i>
+              Nuevo Cliente
+            </button>
+            <button onclick="openProductCreateModal()" class="flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 px-3 py-2 rounded-xl text-xs font-semibold shadow-md transition-all">
+              <i data-lucide="package-plus" class="w-3.5 h-3.5 text-emerald-400"></i>
+              Nuevo Producto
+            </button>
+            <button onclick="window.location.href='nueva-preventa.html'" class="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-lg shadow-emerald-600/10 hover:shadow-emerald-500/20 transition-all">
               <i data-lucide="plus" class="w-4 h-4"></i>
               Nueva Preventa
             </button>
@@ -292,10 +359,10 @@
           <div class="max-w-2xl">
             <h3 class="text-lg font-bold text-white flex items-center gap-2">
               <i data-lucide="layers" class="text-emerald-400 w-5 h-5"></i>
-              Estructura de Base de Datos Vinculada (App Sheep / AppSheet)
+              Estructura de Base de Datos Vinculada (Tormer Systems BD)
             </h3>
             <p class="text-sm text-slate-300 mt-2">
-              Esta aplicación web sincroniza sus cambios directamente con el backend de datos de <strong>App Sheep</strong>. Se mantiene una relación estricta de uno-a-muchos (1:N) entre la cabecera y el detalle para preservar la integridad referencial requerida por la aplicación móvil y web.
+              Esta aplicación web sincroniza sus cambios directamente con el backend de datos de <strong>Tormer Systems BD</strong>. Se mantiene una relación estricta de uno-a-muchos (1:N) entre la cabecera y el detalle para preservar la integridad referencial requerida por la aplicación móvil y web.
             </p>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
               <div class="bg-slate-900/50 p-3.5 rounded-xl border border-slate-800">
@@ -303,7 +370,7 @@
                 <p class="text-xs text-slate-400">Contiene la cabecera, cliente, contacto, total acumulado y fecha de la preventa.</p>
               </div>
               <div class="bg-slate-900/50 p-3.5 rounded-xl border border-slate-800">
-                <span class="text-xs font-bold text-blue-400 uppercase tracking-wider block mb-1">Tabla: DETALLE_DE_PREVENTAS</span>
+                <span class="text-xs font-bold text-blue-400 uppercase tracking-wider block mb-1">Tabla: DETALLE_PREVENTA</span>
                 <p class="text-xs text-slate-400">Contiene cada ítem, cantidad, precio unitario y referencia <code>preventa_id</code> (Foreign Key).</p>
               </div>
             </div>
@@ -319,12 +386,206 @@
         </div>
       </section>
 
+        </div> <!-- End of Tab 1: PREVENTAS -->
+
+        <!-- Tab 2: Témplate de ticket -->
+        <div id="tab-view-template" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <!-- Editor inputs (7/12) -->
+          <div class="lg:col-span-7 bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl p-6 space-y-6">
+            <div class="flex items-center gap-2 mb-4">
+              <i data-lucide="settings" class="text-emerald-400 w-5 h-5"></i>
+              <h3 class="text-base font-bold text-white">Editar Plantilla de Ticket</h3>
+            </div>
+            <p class="text-xs text-slate-400">Actualice en tiempo real los datos fijos del ticket de impresión y previsualización física.</p>
+
+            <div class="space-y-4">
+              <div>
+                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Slogan / Línea 1</label>
+                <input type="text" id="config-slogan" oninput="saveAndApplyTicketConfig()" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Nombre de Empresa</label>
+                <input type="text" id="config-company" oninput="saveAndApplyTicketConfig()" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">NIT / ID Empresa</label>
+                <input type="text" id="config-nit" oninput="saveAndApplyTicketConfig()" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Pie de Página (Línea 1)</label>
+                <input type="text" id="config-footer1" oninput="saveAndApplyTicketConfig()" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Pie de Página (Línea 2)</label>
+                <input type="text" id="config-footer2" oninput="saveAndApplyTicketConfig()" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all">
+              </div>
+
+              <div class="pt-4 border-t border-slate-700 flex gap-3">
+                <button onclick="resetTicketConfigToDefault()" class="flex-1 py-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5">
+                  <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                  Restablecer Valores por Defecto
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ticket digital template preview (5/12) -->
+          <div class="lg:col-span-5 bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-2xl flex flex-col items-center">
+            <div class="w-full flex items-center justify-between mb-4 text-xs">
+              <span class="font-bold text-slate-300 uppercase tracking-wide flex items-center gap-1">
+                <i data-lucide="eye" class="w-4 h-4 text-emerald-400"></i>
+                Vista de Plantilla Fija (80mm)
+              </span>
+              <span class="bg-slate-900 text-slate-400 px-2 py-0.5 rounded text-[10px]">Previsualización</span>
+            </div>
+
+            <!-- Pre-populated preview card mimicking real ticket -->
+            <div class="bg-white text-slate-900 p-6 rounded shadow-inner w-full max-w-[280px] font-mono text-xs border border-slate-300 leading-tight select-none pointer-events-none">
+              <div class="text-center space-y-1 mb-4">
+                <img src="Logoferre.png" alt="Logo" class="mx-auto h-[50px] w-auto object-contain mb-4">
+                <p id="preview-tab-slogan" class="text-[10px] text-slate-700">Calidad y Confianza en productos</p>
+                <h4 id="preview-tab-company" class="font-bold text-xs tracking-wide">Juan Carlo Torres Garcia</h4>
+                <p id="preview-tab-nit" class="text-[10px] text-slate-700">NIT: 0507-271277-101-0</p>
+              </div>
+
+              <div class="space-y-1 text-[10px] mb-3">
+                <p><strong>FECHA:</strong> <span>2026-01-20</span></p>
+                <p><strong>TICKET:</strong> #00332</p>
+                <p><strong>CLIENTE:</strong> JUAN PÉREZ</p>
+                <p><strong>TELF:</strong> +34 600 123 456</p>
+              </div>
+
+              <p class="text-slate-400 overflow-hidden whitespace-nowrap mb-2">------------------------------------</p>
+
+              <div class="space-y-1 text-[10px] mb-2">
+                <div class="flex justify-between font-bold">
+                  <span>CONCEPTO</span>
+                  <span>TOTAL</span>
+                </div>
+                <div class="space-y-1">
+                  <div class="space-y-0.5">
+                    <div class="flex justify-between">
+                      <span class="font-bold truncate max-w-[170px]">SACO DE ALIMENTO PREMIUM 25KG</span>
+                      <span>45.00 $</span>
+                    </div>
+                    <div class="text-[8px] text-slate-500 pl-2">
+                      1 UNID x 45.00 $
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p class="text-slate-400 overflow-hidden whitespace-nowrap mb-2">------------------------------------</p>
+
+              <div class="space-y-1 text-right text-[10px] font-bold">
+                <div class="flex justify-between text-xs font-black border-t border-dashed border-slate-300 pt-1">
+                  <span>TOTAL:</span>
+                  <span class="text-slate-900">45.00 $</span>
+                </div>
+              </div>
+
+              <p class="text-slate-400 overflow-hidden whitespace-nowrap mt-3 mb-3">------------------------------------</p>
+
+              <div class="text-center space-y-1">
+                <p id="preview-tab-footer1" class="text-[9px] font-bold">¡GRACIAS POR SU PREFERENCIA!</p>
+                <p id="preview-tab-footer2" class="text-[8px] text-slate-500">Este documento no tiene validez fiscal                                          Generado con software de Tormer Technologies.</p>
+                <div class="flex flex-col items-center pt-2 gap-1">
+                  <div id="preview-tab-qr" class="flex items-center justify-center"></div>
+                  <span class="text-[7px] text-slate-400 tracking-widest font-mono">Tormer Technologies</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: productos -->
+        <div id="tab-view-productos" class="hidden space-y-6">
+          <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl p-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                  <i data-lucide="package" class="text-emerald-400 w-5 h-5"></i>
+                  Listado de Productos (Stock)
+                </h3>
+                <p class="text-xs text-slate-400 mt-0.5">Vea y administre los productos y sus precios sincronizados con AppSheet.</p>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="relative min-w-[200px]">
+                  <i data-lucide="search" class="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-400"></i>
+                  <input type="text" id="stock-search" onkeyup="filterAndRenderProductosTable()" placeholder="Buscar producto..." class="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-all">
+                </div>
+                <button onclick="openProductCreateModal()" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">
+                  <i data-lucide="plus" class="w-4 h-4"></i>
+                  Nuevo Producto
+                </button>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto border border-slate-700 rounded-xl">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="border-b border-slate-700 text-slate-400 text-xs font-semibold uppercase bg-slate-900/30">
+                    <th class="py-3 px-6">ID / Material</th>
+                    <th class="py-3 px-6">Descripción</th>
+                    <th class="py-3 px-6 text-right">Precio</th>
+                    <th class="py-3 px-6">Fórmula Concatenada</th>
+                  </tr>
+                </thead>
+                <tbody id="productos-table-body" class="divide-y divide-slate-700/50 text-sm">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 4: clientes -->
+        <div id="tab-view-clientes" class="hidden space-y-6">
+          <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl p-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                  <i data-lucide="users" class="text-emerald-400 w-5 h-5"></i>
+                  Listado de Clientes
+                </h3>
+                <p class="text-xs text-slate-400 mt-0.5">Consulte y administre el directorio de clientes y sus números telefónicos.</p>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="relative min-w-[200px]">
+                  <i data-lucide="search" class="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-400"></i>
+                  <input type="text" id="clientes-search" onkeyup="filterAndRenderClientesTable()" placeholder="Buscar cliente..." class="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-all">
+                </div>
+                <button onclick="openClientCreateModal()" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">
+                  <i data-lucide="user-plus" class="w-4 h-4"></i>
+                  Nuevo Cliente
+                </button>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto border border-slate-700 rounded-xl">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="border-b border-slate-700 text-slate-400 text-xs font-semibold uppercase bg-slate-900/30">
+                    <th class="py-3 px-6">ID Cliente</th>
+                    <th class="py-3 px-6">Nombre Completo</th>
+                    <th class="py-3 px-6">Teléfono de Contacto</th>
+                  </tr>
+                </thead>
+                <tbody id="clientes-table-body" class="divide-y divide-slate-700/50 text-sm">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div> <!-- End of Main Content Block -->
     </main>
 
     <!-- Footer -->
     <footer class="bg-slate-900 border-t border-slate-800 mt-auto py-6 text-center text-xs text-slate-500">
       <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <p>© 2026 APP SHEEP Inc. Todos los derechos reservados.</p>
+        <p>© 2026 Tormer Technologies Inc. Todos los derechos reservados.</p>
         <div class="flex items-center gap-4">
           <span class="hover:text-slate-400 transition-colors">Integridad de Esquemas Relacionales</span>
           <span>•</span>
@@ -344,7 +605,7 @@
     <div class="absolute inset-0 bg-slate-950/70 backdrop-blur-sm modal-backdrop" onclick="closeFormModal()"></div>
     
     <!-- Modal Content Card -->
-    <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col relative z-10 transition-all scale-95 opacity-0 duration-200" id="form-modal-card">
+    <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col relative z-10 transition-all scale-95 opacity-0 duration-200" id="form-modal-card">
       
       <!-- Header -->
       <div class="p-5 border-b border-slate-700 bg-slate-800/80 flex items-center justify-between">
@@ -362,106 +623,197 @@
         </button>
       </div>
 
-      <!-- Scrollable Form Body -->
-      <form id="preventa-form" onsubmit="handleFormSubmit(event)" class="overflow-y-auto flex-1 p-6 space-y-6">
+      <!-- Scrollable Form Body with Split Layout (Form + Real-time Ticket Preview) -->
+      <div class="overflow-y-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6">
         
-        <input type="hidden" id="form-id">
+        <!-- Left Side: Form Fields (7/12) -->
+        <form id="preventa-form" onsubmit="handleFormSubmit(event)" class="lg:col-span-7 space-y-6">
 
-        <!-- Cabecera Fields -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <input type="hidden" id="form-id">
 
-          <div>
-            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Nombre del Cliente *</label>
-            <input type="text" id="form-cliente" list="clientes-list" oninput="handleClientInput(this.value)" required placeholder="Ej. María González" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
-          </div>
+          <!-- Cabecera Fields -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 
-          <div>
-            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Teléfono de Contacto</label>
-            <input type="text" id="form-telefono" placeholder="Ej. +34 600 000 000" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Fecha de la Orden *</label>
-            <input type="date" id="form-fecha" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Estado de Pago / Despacho</label>
-            <div class="relative">
-              <select id="form-estado" class="w-full pl-3.5 pr-10 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all appearance-none cursor-pointer">
-                <option value="Pendiente">Pendiente</option>
-                <option value="Completado">Completado</option>
-              </select>
-              <i data-lucide="chevron-down" class="absolute right-3.5 top-3.5 h-4 w-4 text-slate-400 pointer-events-none"></i>
+            <div class="relative" id="client-dropdown-container">
+              <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Nombre del Cliente *</label>
+              <input type="text" id="form-cliente" list="clientes-list" autocomplete="on" onfocus="showClientDropdown()" oninput="handleClientInput(this.value)" required placeholder="Ej. María González" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+              <div id="client-dropdown-panel" class="hidden absolute left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 p-2 max-h-60 overflow-y-auto space-y-1">
+                <!-- Dynamically populated options -->
+              </div>
             </div>
-          </div>
 
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Notas u Observaciones adicionales</label>
-          <textarea id="form-notas" rows="2" placeholder="Indicaciones para el transportista o referencias..." class="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"></textarea>
-        </div>
-
-        <div class="h-px bg-slate-700"></div>
-
-        <!-- Detalle de Preventa Section -->
-        <div>
-          <div class="flex items-center justify-between mb-4">
             <div>
-              <h4 class="text-sm font-bold text-white">Detalle de la Preventa (Artículos)</h4>
-              <p class="text-xs text-slate-400">Añada los productos pedidos y sus respectivos precios.</p>
+              <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Teléfono de Contacto</label>
+              <input type="text" id="form-telefono" oninput="updateFormTicketPreview()" placeholder="Ej. +34 600 000 000" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
             </div>
-            <button type="button" onclick="addDetailRow()" class="flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 hover:border-slate-500 text-slate-200 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-all">
-              <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
-              Añadir Artículo
-            </button>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Fecha de la Orden *</label>
+              <input type="date" id="form-fecha" oninput="updateFormTicketPreview()" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Estado de Pago / Despacho</label>
+              <div class="relative">
+                <select id="form-estado" class="w-full pl-3.5 pr-10 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all appearance-none cursor-pointer">
+                  <option value="Pendiente">Pendiente</option>
+                  <option value="Completado">Completado</option>
+                </select>
+                <i data-lucide="chevron-down" class="absolute right-3.5 top-3.5 h-4 w-4 text-slate-400 pointer-events-none"></i>
+              </div>
+            </div>
+
           </div>
 
-          <!-- Dynamic Items Table -->
-          <div class="border border-slate-700 rounded-xl overflow-hidden bg-slate-900/30">
-            <table class="w-full text-left">
-              <thead>
-                <tr class="bg-slate-900 border-b border-slate-700 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
-                  <th class="py-2 px-4 w-1/2">Producto *</th>
-                  <th class="py-2 px-3 text-center w-20">Cant. *</th>
-                  <th class="py-2 px-3 text-right w-28">P. Unitario *</th>
-                  <th class="py-2 px-4 text-right w-28">Subtotal</th>
-                  <th class="py-2 px-2 text-center w-10"></th>
-                </tr>
-              </thead>
-              <tbody id="form-items-body" class="divide-y divide-slate-700/40">
-                <!-- Appended rows -->
-              </tbody>
-            </table>
-
-            <div id="form-items-empty" class="hidden py-8 text-center text-xs text-slate-500">
-              No hay productos agregados a esta preventa. Presione "Añadir Artículo" para agregar uno.
-            </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Notas u Observaciones adicionales</label>
+            <textarea id="form-notas" rows="2" placeholder="Indicaciones para el transportista o referencias..." class="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"></textarea>
           </div>
 
-          <!-- Total Calculation Banner -->
-          <div class="flex justify-end mt-4">
-            <div class="bg-slate-900 px-6 py-3 rounded-xl border border-slate-700 flex items-center gap-4">
-              <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total de la Orden:</span>
-              <span class="text-xl font-black text-emerald-400" id="form-grand-total">0.00 €</span>
+          <div class="h-px bg-slate-700"></div>
+
+          <!-- Detalle de Preventa Section -->
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h4 class="text-sm font-bold text-white">Detalle de la Preventa (Artículos)</h4>
+                <p class="text-xs text-slate-400">Añada los productos pedidos y sus respectivos precios.</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="openCatalogModal()" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-md">
+                  <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+                  Ver Catálogo
+                </button>
+                <button type="button" onclick="addDetailRow()" class="flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 hover:border-slate-500 text-slate-200 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-all">
+                  <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
+                  Añadir Artículo
+                </button>
+              </div>
             </div>
+
+            <!-- Dynamic Items Table -->
+            <div class="border border-slate-700 rounded-xl overflow-hidden bg-slate-900/30">
+              <table class="w-full text-left">
+                <thead>
+                  <tr class="bg-slate-900 border-b border-slate-700 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                    <th class="py-2 px-4 w-1/2">Producto *</th>
+                    <th class="py-2 px-3 text-center w-20">Cant. *</th>
+                    <th class="py-2 px-3 text-right w-28">P. Unitario *</th>
+                    <th class="py-2 px-4 text-right w-28">Subtotal</th>
+                    <th class="py-2 px-2 text-center w-10"></th>
+                  </tr>
+                </thead>
+                <tbody id="form-items-body" class="divide-y divide-slate-700/40">
+                  <!-- Appended rows -->
+                </tbody>
+              </table>
+
+              <div id="form-items-empty" class="hidden py-8 text-center text-xs text-slate-500">
+                No hay productos agregados a esta preventa. Presione "Añadir Artículo" para agregar uno.
+              </div>
+            </div>
+
+            <!-- Total Calculation Banner -->
+            <div class="flex justify-end mt-4">
+              <div class="bg-slate-900 px-6 py-3 rounded-xl border border-slate-700 flex items-center gap-4">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total de la Orden:</span>
+                <span class="text-xl font-black text-emerald-400" id="form-grand-total">0.00 $</span>
+              </div>
+            </div>
+
           </div>
 
+          <!-- Save/Submit Inside Form (Invisible but keeps standard form submit on Enter key) -->
+          <button type="submit" id="hidden-form-submit" class="hidden"></button>
+
+        </form>
+
+        <!-- Right Side: Real-time Ticket Preview (5/12) -->
+        <div class="lg:col-span-5 bg-slate-900 p-4 rounded-xl border border-slate-700 flex flex-col items-center">
+          <div class="w-full flex items-center justify-between mb-3 text-xs">
+            <span class="font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1">
+              <i data-lucide="eye" class="w-3.5 h-3.5 text-emerald-400"></i>
+              Previsualización de Ticket (80mm)
+            </span>
+            <span class="bg-slate-800 text-slate-400 px-2 py-0.5 rounded text-[10px]">En Tiempo Real</span>
+          </div>
+
+          <!-- Digital receipt container -->
+          <div class="bg-white text-slate-900 p-5 rounded shadow-inner w-full max-w-[280px] font-mono text-xs border border-slate-300 leading-tight select-none pointer-events-none" id="form-digital-receipt">
+            <div class="text-center space-y-1 mb-4">
+              <img src="Logoferre.png" alt="Logo" class="mx-auto h-[50px] w-auto object-contain mb-4">
+              <p id="form-ticket-slogan" class="text-[10px] text-slate-700">Calidad y confianza en nuestros productos</p>
+              <h4 id="form-ticket-company" class="font-bold text-xs tracking-wide">Juan Carlos Torres García</h4>
+              <p id="form-ticket-nit" class="text-[10px] text-slate-700">NIT: 0507-271277-101-0</p>
+            </div>
+
+            <div class="space-y-1 text-[10px] mb-3">
+              <p><strong>FECHA:</strong> <span id="form-ticket-fecha">YYYY-MM-DD</span></p>
+              <p><strong>TICKET:</strong> #00000<span id="form-ticket-id">0</span></p>
+              <p><strong>CLIENTE:</strong> <span id="form-ticket-cliente">CLIENTE</span></p>
+              <p><strong>TELF:</strong> <span id="form-ticket-telefono">TELF</span></p>
+            </div>
+
+            <p class="text-slate-400 overflow-hidden whitespace-nowrap mb-2">------------------------------------</p>
+
+            <div class="space-y-1 text-[10px] mb-2">
+              <div class="flex justify-between font-bold">
+                <span>CONCEPTO</span>
+                <span>TOTAL</span>
+              </div>
+              <div id="form-ticket-items-body" class="space-y-1">
+                <!-- Live items -->
+              </div>
+            </div>
+
+            <p class="text-slate-400 overflow-hidden whitespace-nowrap mb-2">------------------------------------</p>
+
+            <div class="space-y-1 text-right text-[10px] font-bold">
+              <div class="flex justify-between text-xs font-black border-t border-dashed border-slate-300 pt-1">
+                <span>TOTAL:</span>
+                <span id="form-ticket-total" class="text-slate-900">0.00 $</span>
+              </div>
+            </div>
+
+            <p class="text-slate-400 overflow-hidden whitespace-nowrap mt-3 mb-3">------------------------------------</p>
+
+            <div class="text-center space-y-1">
+              <p id="form-ticket-footer1" class="text-[9px] font-bold">¡GRACIAS POR SU PREFERENCIA!</p>
+              <p id="form-ticket-footer2" class="text-[8px] text-slate-500">Este documento no tiene validez fiscal                                          Generado con software de Tormer Technologies.</p>
+              <div class="flex flex-col items-center pt-2 gap-1">
+                <div class="w-24 h-5 bg-slate-900 relative flex items-center justify-between px-2">
+                  <div class="h-full w-px bg-white"></div>
+                  <div class="h-full w-0.5 bg-white"></div>
+                  <div class="h-full w-1 bg-white"></div>
+                  <div class="h-full w-px bg-white"></div>
+                  <div class="h-full w-0.5 bg-white"></div>
+                  <div class="h-full w-px bg-white"></div>
+                  <div class="h-full w-1 bg-white"></div>
+                  <div class="h-full w-0.5 bg-white"></div>
+                  <div class="h-full w-px bg-white"></div>
+                </div>
+                <span class="text-[7px] text-slate-400 tracking-widest font-mono">Tormer Technologies</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- Buttons -->
-        <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-700 bg-slate-800/30 -mx-6 -mb-6 p-6">
-          <button type="button" onclick="closeFormModal()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors">
-            Cancelar
-          </button>
-          <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/10 hover:shadow-emerald-500/20 transition-all flex items-center gap-2">
-            <i data-lucide="save" class="w-4 h-4"></i>
-            Guardar Preventa
-          </button>
-        </div>
+      </div>
 
-      </form>
+      <!-- Action Buttons Footer -->
+      <div class="flex items-center justify-end gap-3 p-5 border-t border-slate-700 bg-slate-800/30">
+        <button type="button" onclick="closeFormModal()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors">
+          Cancelar
+        </button>
+        <button type="button" onclick="submitFormWithPrint()" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg shadow-blue-600/10 hover:shadow-blue-500/20 transition-all flex items-center gap-2">
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          Guardar e Imprimir
+        </button>
+        <button type="button" onclick="document.getElementById('hidden-form-submit').click()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/10 hover:shadow-emerald-500/20 transition-all flex items-center gap-2">
+          <i data-lucide="save" class="w-4 h-4"></i>
+          Guardar Preventa
+        </button>
+      </div>
 
     </div>
   </div>
@@ -568,11 +920,10 @@
           <!-- The Ticket Preview Container (mimicking a physical receipt) -->
           <div class="bg-white text-slate-900 p-5 rounded shadow-inner w-full max-w-[280px] font-mono text-xs border border-slate-300 leading-tight select-none pointer-events-none" id="digital-receipt">
             <div class="text-center space-y-1 mb-4">
-              <img src="Logoferre.png" alt="Logo" class="mx-auto h-12 object-contain mb-2">
-              <h4 class="font-black text-sm tracking-widest uppercase">*** APP SHEEP ***</h4>
-              <p class="text-[10px] text-slate-600">SISTEMA INTEGRADO APPSHEET</p>
-              <p class="text-[9px] text-slate-500">Calle Ganadería S/N, Badajoz</p>
-              <p class="text-[9px] text-slate-500">Telf: +34 900 123 456</p>
+              <img src="Logoferre.png" alt="Logo" class="mx-auto h-[50px] w-auto object-contain mb-4">
+              <p id="view-ticket-slogan" class="text-[10px] text-slate-700">Calidad y confianza en nuestros productos</p>
+              <h4 id="view-ticket-company" class="font-bold text-xs tracking-wide">Juan Carlos Torres García</h4>
+              <p id="view-ticket-nit" class="text-[10px] text-slate-700">NIT: 0507-271277-101-0</p>
             </div>
 
             <div class="space-y-1 text-[10px] mb-3">
@@ -600,30 +951,20 @@
             <div class="space-y-1 text-right text-[10px] font-bold">
               <div class="flex justify-between text-xs font-black border-t border-dashed border-slate-300 pt-1">
                 <span>TOTAL:</span>
-                <span id="ticket-total" class="text-slate-900">0.00 €</span>
+                <span id="ticket-total" class="text-slate-900">0.00 $</span>
               </div>
             </div>
 
             <p class="text-slate-400 overflow-hidden whitespace-nowrap mt-3 mb-3">------------------------------------</p>
 
             <div class="text-center space-y-1">
-              <p class="text-[9px] font-bold">¡GRACIAS POR SU PREFERENCIA!</p>
-              <p class="text-[8px] text-slate-500">Documento No Válido como Factura</p>
+              <p id="view-ticket-footer1" class="text-[9px] font-bold">¡GRACIAS POR SU PREFERENCIA!</p>
+              <p id="view-ticket-footer2" class="text-[8px] text-slate-500">Este documento no tiene validez fiscal                                          Generado con software de Tormer Technologies.</p>
               
-              <!-- Mock QR/Barcode -->
+              <!-- Código QR real de la preventa -->
               <div class="flex flex-col items-center pt-2 gap-1">
-                <div class="w-24 h-5 bg-slate-900 relative flex items-center justify-between px-2">
-                  <div class="h-full w-px bg-white"></div>
-                  <div class="h-full w-0.5 bg-white"></div>
-                  <div class="h-full w-1 bg-white"></div>
-                  <div class="h-full w-px bg-white"></div>
-                  <div class="h-full w-0.5 bg-white"></div>
-                  <div class="h-full w-px bg-white"></div>
-                  <div class="h-full w-1 bg-white"></div>
-                  <div class="h-full w-0.5 bg-white"></div>
-                  <div class="h-full w-px bg-white"></div>
-                </div>
-                <span class="text-[7px] text-slate-400 tracking-widest font-mono">*APP-SHEEP-PREVENTA*</span>
+                <div id="view-ticket-qr" class="flex items-center justify-center"></div>
+                <span class="text-[7px] text-slate-400 tracking-widest font-mono">Tormer Technologies</span>
               </div>
             </div>
           </div>
@@ -648,6 +989,168 @@
     </div>
   </div>
 
+
+  <!-- Modal Catálogo (Carrito de Productos para Preventa) -->
+  <div id="catalog-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm modal-backdrop" onclick="closeCatalogModal()"></div>
+    <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col relative z-10 transition-all scale-95 opacity-0 duration-200" id="catalog-modal-card">
+
+      <!-- Header -->
+      <div class="p-5 border-b border-slate-700 bg-slate-800/80 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-2.5">
+          <div class="bg-emerald-500/10 text-emerald-400 p-2 rounded-lg border border-emerald-500/20">
+            <i data-lucide="shopping-cart" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Catálogo de Productos</h3>
+            <p class="text-xs text-slate-400">Añada productos al carrito y confirme para agregarlos a la preventa.</p>
+          </div>
+        </div>
+        <button onclick="closeCatalogModal()" class="text-slate-400 hover:text-white p-1 hover:bg-slate-700 rounded-lg transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Search bar -->
+      <div class="p-4 border-b border-slate-700 bg-slate-900/40">
+        <div class="relative max-w-md">
+          <i data-lucide="search" class="absolute left-3 top-2.5 h-4 w-4 text-slate-400"></i>
+          <input type="text" id="catalog-search" oninput="renderCatalogGrid()" placeholder="Buscar producto por nombre o código..." class="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+        </div>
+      </div>
+
+      <!-- Body: Grid + Cart Summary -->
+      <div class="overflow-y-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 p-5">
+
+        <!-- Product Grid (8/12) -->
+        <div class="lg:col-span-8">
+          <div id="catalog-grid" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+            <!-- Product cards rendered dynamically -->
+          </div>
+          <div id="catalog-empty" class="hidden py-16 text-center text-sm text-slate-500">
+            No se encontraron productos que coincidan con la búsqueda.
+          </div>
+        </div>
+
+        <!-- Cart Summary (4/12) -->
+        <div class="lg:col-span-4">
+          <div class="bg-slate-900 rounded-xl border border-slate-700 p-4 sticky top-0">
+            <h4 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+              <i data-lucide="shopping-basket" class="w-4 h-4 text-emerald-400"></i>
+              Carrito (<span id="catalog-cart-count">0</span> artículos)
+            </h4>
+            <div id="catalog-cart-items" class="space-y-2 max-h-72 overflow-y-auto mb-3">
+              <p class="text-xs text-slate-500">Aún no has añadido productos.</p>
+            </div>
+            <div class="flex justify-between items-center border-t border-slate-700 pt-3">
+              <span class="text-xs font-bold text-slate-400 uppercase">Total</span>
+              <span class="text-lg font-black text-emerald-400" id="catalog-cart-total">0.00 $</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div class="flex items-center justify-end gap-3 p-5 border-t border-slate-700 bg-slate-800/30">
+        <button type="button" onclick="closeCatalogModal()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors">
+          Cancelar
+        </button>
+        <button type="button" onclick="confirmCatalogCart()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg transition-all flex items-center gap-2">
+          <i data-lucide="check" class="w-4 h-4"></i>
+          Confirmar y Agregar a la Preventa
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal 3: Create Client -->
+  <div id="client-create-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-950/70 backdrop-blur-sm modal-backdrop" onclick="closeClientCreateModal()"></div>
+    <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl max-w-md w-full overflow-hidden flex flex-col relative z-10 transition-all scale-95 opacity-0 duration-200" id="client-create-card">
+      <div class="p-5 border-b border-slate-700 bg-slate-800/80 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="bg-emerald-500/10 text-emerald-400 p-2 rounded-lg border border-emerald-500/20">
+            <i data-lucide="user-plus" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Nuevo Cliente</h3>
+            <p class="text-xs text-slate-400">Registre un nuevo cliente en la base de datos.</p>
+          </div>
+        </div>
+        <button onclick="closeClientCreateModal()" class="text-slate-400 hover:text-white p-1 hover:bg-slate-700 rounded-lg transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form id="client-create-form" onsubmit="handleClientCreateSubmit(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Nombre Completo *</label>
+          <input type="text" id="new-client-nombre" required placeholder="Ej. Carlos Mendoza" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Teléfono de Contacto</label>
+          <input type="text" id="new-client-telefono" placeholder="Ej. +34 600 111 222" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+        </div>
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-700">
+          <button type="button" onclick="closeClientCreateModal()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg transition-all flex items-center gap-2">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            Guardar Cliente
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 4: Create Product -->
+  <div id="product-create-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-950/70 backdrop-blur-sm modal-backdrop" onclick="closeProductCreateModal()"></div>
+    <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl max-w-md w-full overflow-hidden flex flex-col relative z-10 transition-all scale-95 opacity-0 duration-200" id="product-create-card">
+      <div class="p-5 border-b border-slate-700 bg-slate-800/80 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="bg-emerald-500/10 text-emerald-400 p-2 rounded-lg border border-emerald-500/20">
+            <i data-lucide="package-plus" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Nuevo Producto</h3>
+            <p class="text-xs text-slate-400">Registre un nuevo producto en la base de datos.</p>
+          </div>
+        </div>
+        <button onclick="closeProductCreateModal()" class="text-slate-400 hover:text-white p-1 hover:bg-slate-700 rounded-lg transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form id="product-create-form" onsubmit="handleProductCreateSubmit(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Código de Material / ID *</label>
+          <input type="text" id="new-product-material" required placeholder="Ej. PROD-99" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Texto Breve del Material *</label>
+          <input type="text" id="new-product-textobreve" required placeholder="Ej. Martillo de Acero 16oz" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Precio de Venta *</label>
+          <div class="relative">
+            <input type="number" id="new-product-precio" required min="0" step="0.01" placeholder="0.00" class="w-full pr-8 pl-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+            <span class="absolute right-3.5 top-3.5 text-xs text-slate-500">$</span>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-700">
+          <button type="button" onclick="closeProductCreateModal()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg transition-all flex items-center gap-2">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            Guardar Producto
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- Notification Toasts container -->
   <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
@@ -721,14 +1224,14 @@
       const existingStock = lsGet(LS_KEYS.stock);
       if (existingStock.length === 0 || !existingStock[0].TextoBreveDelMaterial) {
         lsSet(LS_KEYS.stock, [
-          { material: 'Saco-01', TextoBreveDelMaterial: 'Saco de Alimento Premium Ovejas 25kg', precio: 45.00, concat: 'Saco de Alimento Premium Ovejas 25kg [Saco-01] - 45.00 €' },
-          { material: 'Sup-01', TextoBreveDelMaterial: 'Suplemento Vitamínico Ovino 5L', precio: 40.50, concat: 'Suplemento Vitamínico Ovino 5L [Sup-01] - 40.50 €' },
-          { material: 'Esq-01', TextoBreveDelMaterial: 'Esquiladora Profesional SheepCut', precio: 210.00, concat: 'Esquiladora Profesional SheepCut [Esq-01] - 210.00 €' },
-          { material: 'Cuc-01', TextoBreveDelMaterial: 'Cuchillas de repuesto SheepCut 4T', precio: 20.00, concat: 'Cuchillas de repuesto SheepCut 4T [Cuc-01] - 20.00 €' },
-          { material: 'Ide-01', TextoBreveDelMaterial: 'Identificadores de Oreja (Pack 100u)', precio: 25.00, concat: 'Identificadores de Oreja (Pack 100u) [Ide-01] - 25.00 €' },
-          { material: 'Ten-01', TextoBreveDelMaterial: 'Tenaza Aplicadora de Crotales', precio: 35.00, concat: 'Tenaza Aplicadora de Crotales [Ten-01] - 35.00 €' },
-          { material: 'PRI-000233', TextoBreveDelMaterial: 'UNI TORNILLO PARA BISAGRA DE 1/2"', precio: 0.10, concat: 'PRI-000233 UNI TORNILLO PARA BISAGRA DE 1/2" Inventario en almacén 5980 - 0.10 €' },
-          { material: 'PRI-000148', TextoBreveDelMaterial: 'PZA REMACHE POP 1/8X1/2 44523', precio: 0.03, concat: 'PRI-000148 PZA REMACHE POP 1/8X1/2 44523 Inventario en almacén 552 - 0.03 €' }
+          { material: 'Saco-01', TextoBreveDelMaterial: 'Saco de Alimento Premium Ovejas 25kg', precio: 45.00, concat: 'Saco de Alimento Premium Ovejas 25kg [Saco-01] - 45.00 $' },
+          { material: 'Sup-01', TextoBreveDelMaterial: 'Suplemento Vitamínico Ovino 5L', precio: 40.50, concat: 'Suplemento Vitamínico Ovino 5L [Sup-01] - 40.50 $' },
+          { material: 'Esq-01', TextoBreveDelMaterial: 'Esquiladora Profesional SheepCut', precio: 210.00, concat: 'Esquiladora Profesional SheepCut [Esq-01] - 210.00 $' },
+          { material: 'Cuc-01', TextoBreveDelMaterial: 'Cuchillas de repuesto SheepCut 4T', precio: 20.00, concat: 'Cuchillas de repuesto SheepCut 4T [Cuc-01] - 20.00 $' },
+          { material: 'Ide-01', TextoBreveDelMaterial: 'Identificadores de Oreja (Pack 100u)', precio: 25.00, concat: 'Identificadores de Oreja (Pack 100u) [Ide-01] - 25.00 $' },
+          { material: 'Ten-01', TextoBreveDelMaterial: 'Tenaza Aplicadora de Crotales', precio: 35.00, concat: 'Tenaza Aplicadora de Crotales [Ten-01] - 35.00 $' },
+          { material: 'PRI-000233', TextoBreveDelMaterial: 'UNI TORNILLO PARA BISAGRA DE 1/2"', precio: 0.10, concat: 'PRI-000233 UNI TORNILLO PARA BISAGRA DE 1/2" Inventario en almacén 5980 - 0.10 $' },
+          { material: 'PRI-000148', TextoBreveDelMaterial: 'PZA REMACHE POP 1/8X1/2 44523', precio: 0.03, concat: 'PRI-000148 PZA REMACHE POP 1/8X1/2 44523 Inventario en almacén 552 - 0.03 $' }
         ]);
       }
       if (lsGet(LS_KEYS.preventa).length === 0) {
@@ -810,7 +1313,7 @@
             material: n.material || '',
             TextoBreveDelMaterial: s.TextoBreveDelMaterial || n.textobrevedelmaterial || '',
             precio: parseFloat(s.Precio || n.precio) || 0,
-            concat: n.concat || ''
+            concat: (n.concat || '').replace(/$/g, '$')
           };
         }).filter(s => s.material && s.concat);
         if (stock.length > 0) lsSet(LS_KEYS.stock, stock);
@@ -820,33 +1323,51 @@
         const clientesLocal = lsGet(LS_KEYS.clientes);
         const preventasNuevas = preventasAS.map(p => {
           const idtransacion = p.IDTransacion || p.idtransacion || p.id || '';
-          const idcliente = p.IDcliente || p.idcliente || p.cliente || '';
-          const match = clientesLocal.find(c => c.id === idcliente || c.nombre === idcliente);
+          const idcliente = p.IDcliente || p.idcliente || '';
+          const nombreCliente = p.NombreDelCliente || p.nombredelcliente || idcliente || '';
+          const match = clientesLocal.find(c => c.id === idcliente || c.nombre === nombreCliente);
           return {
             id: idtransacion,
-            cliente: idcliente,
+            cliente: nombreCliente,
             telefono: match ? (match.telefono || '') : '',
             fecha: p.FECHA || p.fecha || '',
             total: parseFloat(p.total) || 0,
             estado: p.Estado || p.estado || 'Pendiente',
             notas: p.Notas || p.notas || ''
           };
-        });
-        lsSet(LS_KEYS.preventa, preventasNuevas);
+        }).filter(p => p.id);
 
         const detallesNuevos = (Array.isArray(detallesAS) ? detallesAS : []).map(d => {
-          const cantidad = parseInt(d.CANTIDAD || d.cantidad) || 0;
-          const precio = parseFloat(d.PRECIO || d.precio) || 0;
+          const cantidad = parseFloat(d.CANTIDAD || d.cantidad) || 0.0;
+          const precio = parseFloat(d.PRECIO || d.precio) || 0.0;
           return {
             id: d.IDDETALLE || d.iddetalle || d.id || '',
-            preventa_id: d.IDTransaccion || d.idtransaccion || d.preventa_id || '',
+            preventa_id: d.IDTransaccion || d.idtransaccion || d.IDTransacion || d.preventa_id || '',
             producto: d.ARTICULO || d.articulo || d.producto || '',
             cantidad,
             precio_unitario: precio,
             subtotal: parseFloat(d['TOTAL LINEA'] || d.total_linea || d.subtotal) || (cantidad * precio)
           };
-        });
-        lsSet(LS_KEYS.detalle, detallesNuevos);
+        }).filter(d => d.preventa_id); // descarta filas huérfanas sin enlace válido a una preventa
+
+        // SALVAGUARDA: si tenemos preventas locales con productos ya
+        // guardados y lo que llegó de AppSheet viene sin detalles (por
+        // columnas con nombre distinto al esperado, por ejemplo), NO
+        // sobreescribimos: eso borraría productos guardados correctamente.
+        const preventasLocalAntes = lsGet(LS_KEYS.preventa);
+        const detallesLocalAntes = lsGet(LS_KEYS.detalle);
+        const teniamosDetallesLocales = detallesLocalAntes.length > 0;
+        const appSheetTraeDetalles = detallesNuevos.length > 0;
+
+        if (preventasNuevas.length > 0) {
+          lsSet(LS_KEYS.preventa, preventasNuevas);
+        }
+
+        if (appSheetTraeDetalles || !teniamosDetallesLocales) {
+          lsSet(LS_KEYS.detalle, detallesNuevos);
+        } else {
+          console.warn('AppSheet no devolvió detalles reconocibles (revisa los nombres de columna en DETALLE_PREVENTA); se conserva la caché local para no perder productos.');
+        }
       }
     }
 
@@ -870,18 +1391,28 @@
       // Asegura que haya datos de demostración en la caché local
       seedLocalDataIfEmpty();
 
+      // Load Ticket Config
+      loadTicketConfig();
+
       // Load Data (caché local + intento de sincronización con AppSheet)
       fetchPreventas();
       fetchClientesAndProductos();
-      
+
       // Sync initial AppSheet info
       updateAppSheetSyncTime();
 
       // Close dropdowns on clicking outside
-      window.addEventListener('click', () => {
+      window.addEventListener('click', (e) => {
+        // Handle closing product dropdowns when clicking outside
         document.querySelectorAll('[id^="product-panel-"]').forEach(p => {
           p.classList.add('hidden');
         });
+
+        // Close client dropdown if clicking outside customer field/container
+        const clientContainer = document.getElementById('client-dropdown-container');
+        if (clientContainer && !clientContainer.contains(e.target)) {
+          hideClientDropdown();
+        }
       });
     });
 
@@ -891,29 +1422,303 @@
       productosGlobal = lsGet(LS_KEYS.stock);
       populateClientesDatalist();
       populateProductosDatalist();
+      filterAndRenderProductosTable();
+      filterAndRenderClientesTable();
+    }
+
+    function filterAndRenderProductosTable() {
+      const q = (document.getElementById('stock-search').value || '').toLowerCase().trim();
+      const tbody = document.getElementById('productos-table-body');
+      if (!tbody) return;
+
+      tbody.innerHTML = '';
+
+      const filtered = productosGlobal.filter(p => {
+        return (p.material || '').toLowerCase().includes(q) ||
+               (p.TextoBreveDelMaterial || '').toLowerCase().includes(q) ||
+               (p.concat || '').toLowerCase().includes(q);
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="4" class="py-8 text-center text-slate-400">No se encontraron productos en stock.</td>
+          </tr>
+        `;
+        return;
+      }
+
+      filtered.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-700/30 transition-colors border-b border-slate-700/30";
+        tr.innerHTML = `
+          <td class="py-3 px-6 font-mono text-slate-300 font-bold">${p.material}</td>
+          <td class="py-3 px-6 text-white font-medium">${p.TextoBreveDelMaterial}</td>
+          <td class="py-3 px-6 text-right text-emerald-400 font-black font-mono">${(p.precio || 0).toFixed(2)} $</td>
+          <td class="py-3 px-6 text-slate-400 text-xs font-mono">${p.concat || ''}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterAndRenderClientesTable() {
+      const q = (document.getElementById('clientes-search').value || '').toLowerCase().trim();
+      const tbody = document.getElementById('clientes-table-body');
+      if (!tbody) return;
+
+      tbody.innerHTML = '';
+
+      const filtered = clientesGlobal.filter(c => {
+        return (c.nombre || '').toLowerCase().includes(q) ||
+               (c.telefono || '').toLowerCase().includes(q) ||
+               (c.id || '').toLowerCase().includes(q);
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="3" class="py-8 text-center text-slate-400">No se encontraron clientes registrados.</td>
+          </tr>
+        `;
+        return;
+      }
+
+      filtered.forEach(c => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-700/30 transition-colors border-b border-slate-700/30";
+        tr.innerHTML = `
+          <td class="py-3 px-6 font-mono text-slate-400 font-bold">#${c.id}</td>
+          <td class="py-3 px-6 text-white font-bold">${c.nombre}</td>
+          <td class="py-3 px-6 text-slate-300 font-medium flex items-center gap-2 mt-1">
+            <i data-lucide="phone" class="w-3.5 h-3.5 text-slate-500"></i>
+            <span>${c.telefono || 'Sin teléfono'}</span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      lucide.createIcons();
     }
 
     function populateClientesDatalist() {
-      const datalist = document.getElementById('clientes-list');
-      if (datalist) {
-        datalist.innerHTML = clientesGlobal.map(c => `<option value="${c.nombre}"></option>`).join('');
+      const list = document.getElementById('clientes-list');
+      if (!list) return;
+      list.innerHTML = '';
+      clientesGlobal.forEach(c => {
+        const option = document.createElement('option');
+        option.value = c.nombre;
+        list.appendChild(option);
+      });
+    }
+
+    function handleClientInput(value) {
+      filterClientDropdown(value);
+
+      // Auto-extract and populate phone if match found
+      const matched = clientesGlobal.find(c => c.nombre.toLowerCase() === value.toLowerCase().trim());
+      if (matched) {
+        const phoneInput = document.getElementById('form-telefono');
+        if (phoneInput) {
+          phoneInput.value = matched.telefono || '';
+          updateFormTicketPreview();
+        }
       }
     }
 
     function populateProductosDatalist() {
-      const datalist = document.getElementById('productos-list');
-      if (datalist) {
-        datalist.innerHTML = productosGlobal.map(p => `<option value="${p.concat}"></option>`).join('');
+      // Datalists are replaced by custom searchable dropdowns.
+    }
+
+    function showClientDropdown() {
+      const panel = document.getElementById('client-dropdown-panel');
+      if (!panel) return;
+      panel.classList.remove('hidden');
+      filterClientDropdown(document.getElementById('form-cliente').value);
+    }
+
+    function filterClientDropdown(query) {
+      const panel = document.getElementById('client-dropdown-panel');
+      if (!panel) return;
+
+      const q = query.toLowerCase().trim();
+      const filtered = clientesGlobal.filter(c => {
+        return (c.nombre || '').toLowerCase().includes(q) || (c.telefono || '').toLowerCase().includes(q);
+      });
+
+      panel.innerHTML = '';
+
+      if (filtered.length === 0) {
+        panel.innerHTML = `
+          <div class="text-xs text-slate-400 p-3 text-center">
+            Ningún cliente coincide. Puede escribir para crearlo o registrarlo.
+          </div>
+        `;
+        updateFormTicketPreview();
+        return;
+      }
+
+      filtered.forEach(c => {
+        const div = document.createElement('div');
+        div.className = "text-xs text-slate-200 hover:bg-emerald-600 hover:text-white p-2.5 rounded-lg cursor-pointer transition-colors flex justify-between items-center";
+        div.innerHTML = `
+          <div>
+            <div class="font-bold text-white group-hover:text-white">${c.nombre}</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">${c.telefono || 'Sin teléfono'}</div>
+          </div>
+          <i data-lucide="user" class="w-3.5 h-3.5 text-slate-500"></i>
+        `;
+        div.onmousedown = () => {
+          selectClient(c.nombre, c.telefono);
+        };
+        panel.appendChild(div);
+      });
+
+      lucide.createIcons();
+      updateFormTicketPreview();
+    }
+
+    function openClientCreateModal() {
+      const modal = document.getElementById('client-create-modal');
+      const card = document.getElementById('client-create-card');
+      document.getElementById('client-create-form').reset();
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        card.classList.remove('scale-95', 'opacity-0');
+        card.classList.add('scale-100', 'opacity-100');
+      }, 50);
+      lucide.createIcons();
+    }
+
+    function closeClientCreateModal() {
+      const modal = document.getElementById('client-create-modal');
+      const card = document.getElementById('client-create-card');
+      card.classList.remove('scale-100', 'opacity-100');
+      card.classList.add('scale-95', 'opacity-0');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 200);
+    }
+
+    async function handleClientCreateSubmit(e) {
+      e.preventDefault();
+      const nombre = document.getElementById('new-client-nombre').value.trim();
+      const telefono = document.getElementById('new-client-telefono').value.trim();
+
+      if (!nombre) {
+        showToast('El nombre del cliente es obligatorio.', 'warning');
+        return;
+      }
+
+      try {
+        // Guardado 100% local (no requiere backend ni servicio externo).
+        const local = lsGet(LS_KEYS.clientes);
+        const newId = 'C-' + Date.now().toString(36).toUpperCase();
+        const newClient = { id: newId, nombre, telefono };
+        local.push(newClient);
+        lsSet(LS_KEYS.clientes, local);
+
+        clientesGlobal = local;
+        populateClientesDatalist();
+        filterAndRenderClientesTable();
+
+        showToast('Cliente creado exitosamente', 'success');
+        closeClientCreateModal();
+
+        // If pre-sale form is open, auto-fill it
+        const clientInput = document.getElementById('form-cliente');
+        if (clientInput && !document.getElementById('form-modal').classList.contains('hidden')) {
+          clientInput.value = nombre;
+          document.getElementById('form-telefono').value = telefono || '';
+          updateFormTicketPreview();
+        }
+
+        // Propagar a AppSheet en segundo plano (no bloqueante, no requerido)
+        callAppSheetAPI("clientes", "Add", [{ idcliente: newId, nombrecliente: nombre, telefono }])
+          .catch(err => console.warn("No se pudo propagar el cliente a AppSheet:", err.message));
+      } catch (err) {
+        console.error(err);
+        showToast(err.message, 'error');
       }
     }
 
-    function handleClientInput(value) {
-      const matched = clientesGlobal.find(c => c.nombre.toLowerCase().trim() === value.toLowerCase().trim());
-      if (matched && matched.telefono) {
-        const telInput = document.getElementById('form-telefono');
-        if (telInput) {
-          telInput.value = matched.telefono;
-        }
+    function openProductCreateModal() {
+      const modal = document.getElementById('product-create-modal');
+      const card = document.getElementById('product-create-card');
+      document.getElementById('product-create-form').reset();
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        card.classList.remove('scale-95', 'opacity-0');
+        card.classList.add('scale-100', 'opacity-100');
+      }, 50);
+      lucide.createIcons();
+    }
+
+    function closeProductCreateModal() {
+      const modal = document.getElementById('product-create-modal');
+      const card = document.getElementById('product-create-card');
+      card.classList.remove('scale-100', 'opacity-100');
+      card.classList.add('scale-95', 'opacity-0');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 200);
+    }
+
+    async function handleProductCreateSubmit(e) {
+      e.preventDefault();
+      const material = document.getElementById('new-product-material').value.trim();
+      const TextoBreveDelMaterial = document.getElementById('new-product-textobreve').value.trim();
+      const precio = parseFloat(document.getElementById('new-product-precio').value) || 0.0;
+
+      if (!material || !TextoBreveDelMaterial) {
+        showToast('Código y descripción del producto son obligatorios.', 'warning');
+        return;
+      }
+
+      const local = lsGet(LS_KEYS.stock);
+      if (local.some(p => p.material === material)) {
+        showToast('Ya existe un producto con ese código.', 'error');
+        return;
+      }
+
+      try {
+        // Guardado 100% local (no requiere backend ni servicio externo).
+        const newProduct = {
+          material,
+          TextoBreveDelMaterial,
+          precio,
+          concat: `${TextoBreveDelMaterial} [${material}] - ${precio.toFixed(2)} $`
+        };
+        local.push(newProduct);
+        lsSet(LS_KEYS.stock, local);
+
+        productosGlobal = local;
+        populateProductosDatalist();
+        filterAndRenderProductosTable();
+        if (typeof renderCatalogGrid === 'function') renderCatalogGrid();
+
+        showToast('Producto creado exitosamente', 'success');
+        closeProductCreateModal();
+
+        // Propagar a AppSheet en segundo plano (no bloqueante, no requerido)
+        callAppSheetAPI("stock", "Add", [{ Material: material, TextoBreveDelMaterial, Precio: String(precio) }])
+          .catch(err => console.warn("No se pudo propagar el producto a AppSheet:", err.message));
+      } catch (err) {
+        console.error(err);
+        showToast(err.message, 'error');
+      }
+    }
+
+    function selectClient(nombre, telefono) {
+      document.getElementById('form-cliente').value = nombre;
+      document.getElementById('form-telefono').value = telefono || '';
+      hideClientDropdown();
+      updateFormTicketPreview();
+    }
+
+    function hideClientDropdown() {
+      const panel = document.getElementById('client-dropdown-panel');
+      if (panel) {
+        panel.classList.add('hidden');
       }
     }
 
@@ -944,22 +1749,47 @@
 
       if (isHidden) {
         panel.classList.remove('hidden');
-        const searchInput = document.getElementById(`product-search-${rowIndex}`);
-        if (searchInput) {
-          searchInput.value = '';
-          filterProductDropdown(rowIndex, '');
-          searchInput.focus();
-        }
+        const displayInput = document.getElementById(`product-display-${rowIndex}`);
+        filterProductDropdown(rowIndex, displayInput ? displayInput.value : '');
       } else {
         panel.classList.add('hidden');
       }
     }
 
     function filterProductDropdown(rowIndex, query) {
+      const panel = document.getElementById(`product-panel-${rowIndex}`);
+      if (panel) panel.classList.remove('hidden');
+
       const listContainer = document.getElementById(`product-options-${rowIndex}`);
       if (!listContainer) return;
 
       const q = query.toLowerCase().trim();
+
+      // Automatically extract price on exact match when typing/pasting
+      const exactMatch = productosGlobal.find(p =>
+        (p.material || '').toLowerCase() === q ||
+        (p.TextoBreveDelMaterial || '').toLowerCase() === q ||
+        (p.concat || '').toLowerCase() === q
+      );
+
+      if (exactMatch) {
+        if (formItems[rowIndex]) {
+          formItems[rowIndex].producto = exactMatch.material;
+          formItems[rowIndex].precio_unitario = exactMatch.precio;
+        }
+        const row = document.getElementById(`form-row-${rowIndex}`);
+        if (row) {
+          const priceInput = row.querySelector('input[type="number"][step="0.01"]');
+          if (priceInput) priceInput.value = exactMatch.precio;
+
+          const qtyInput = row.querySelector('input[oninput*="cantidad"]');
+          const qty = qtyInput ? (parseFloat(qtyInput.value) || 1.0) : 1.0;
+          const subEl = document.getElementById(`form-subtotal-${rowIndex}`);
+          if (subEl) subEl.textContent = `${(qty * exactMatch.precio).toFixed(2)} $`;
+        }
+        calculateFormTotal();
+        updateFormTicketPreview();
+      }
 
       const filtered = productosGlobal.filter(p => {
         const mat = (p.material || '').toLowerCase();
@@ -971,19 +1801,19 @@
       listContainer.innerHTML = '';
 
       if (filtered.length === 0) {
-        listContainer.innerHTML = '<div class="text-xs text-slate-500 py-2 px-3">No se encontraron productos</div>';
+        listContainer.innerHTML = '<div class="text-xs text-slate-400 py-3 text-center">No se encontraron productos</div>';
         return;
       }
 
       filtered.forEach(p => {
         const optionDiv = document.createElement('div');
-        optionDiv.className = "text-xs text-slate-200 hover:bg-emerald-600 hover:text-white py-1.5 px-3 rounded cursor-pointer transition-colors";
+        optionDiv.className = "text-xs text-slate-200 hover:bg-emerald-600 hover:text-white p-2.5 rounded-lg cursor-pointer transition-colors";
         const displayName = p.TextoBreveDelMaterial || p.concat || p.material;
         optionDiv.innerHTML = `
-          <div class="font-semibold truncate">${displayName}</div>
-          <div class="text-[10px] text-slate-400">ID: ${p.material} | Precio: ${p.precio.toFixed(2)} €</div>
+          <div class="font-bold text-white group-hover:text-white whitespace-normal break-words">${displayName}</div>
+          <div class="text-[10px] text-slate-400 mt-0.5">ID: ${p.material} • Precio: ${p.precio.toFixed(2)} $</div>
         `;
-        optionDiv.onclick = (e) => {
+        optionDiv.onmousedown = (e) => {
           e.stopPropagation();
           selectProduct(rowIndex, p.material);
         };
@@ -1012,12 +1842,12 @@
           priceInput.value = matched.precio;
         }
 
-        const qtyInput = row.querySelector('input[type="number"][min="1"]');
-        const qty = qtyInput ? (parseInt(qtyInput.value) || 1) : 1;
+        const qtyInput = row.querySelector('input[oninput*="cantidad"]');
+        const qty = qtyInput ? (parseFloat(qtyInput.value) || 1.0) : 1.0;
         const sub = (qty * matched.precio).toFixed(2);
         const subEl = document.getElementById(`form-subtotal-${rowIndex}`);
         if (subEl) {
-          subEl.textContent = `${sub} €`;
+          subEl.textContent = `${sub} $`;
         }
       }
 
@@ -1027,15 +1857,62 @@
       }
 
       calculateFormTotal();
+      updateFormTicketPreview();
     }
 
     // Fetch all preventas (intenta sincronizar con AppSheet, luego pinta desde caché local)
     async function fetchPreventas() {
       try {
-        await syncFromAppSheetToLocal();
+        const response = await fetch('/api/preventas');
+        if (response.ok) {
+          const data = await response.json();
+          // Update localStorage cache to match
+          const preventasLocal = [];
+          const detallesLocal = [];
+          data.forEach(p => {
+            preventasLocal.push({
+              id: p.id,
+              cliente: p.cliente,
+              telefono: p.telefono,
+              fecha: p.fecha,
+              total: p.total,
+              estado: p.estado,
+              notas: p.notas
+            });
+            if (p.detalles && Array.isArray(p.detalles)) {
+              p.detalles.forEach(d => {
+                detallesLocal.push({
+                  id: d.id,
+                  preventa_id: d.preventa_id,
+                  producto: d.producto,
+                  cantidad: d.cantidad,
+                  precio_unitario: d.precio_unitario,
+                  subtotal: d.subtotal
+                });
+              });
+            }
+          });
+          lsSet(LS_KEYS.preventa, preventasLocal);
+          lsSet(LS_KEYS.detalle, detallesLocal);
+
+          preventas = data.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '') || String(b.id).localeCompare(String(a.id)));
+          calculateStats();
+          filterAndRender();
+          return;
+        }
       } catch (err) {
-        console.warn("No se pudo sincronizar con AppSheet, usando caché local:", err.message);
+        console.warn("No se pudo obtener preventas del backend, usando caché local:", err.message);
       }
+
+      // IMPORTANTE: ya NO se llama automáticamente a syncFromAppSheetToLocal()
+      // aquí. Antes, cada vez que se recargaba la página (algo constante en
+      // GitHub Pages, donde /api/preventas siempre falla), se intentaba jalar
+      // datos "frescos" de AppSheet y se sobreescribía la caché local. Si esa
+      // sincronización venía incompleta o con nombres de columna distintos a
+      // los que espera este código, terminaba BORRANDO los productos que sí
+      // se habían guardado correctamente en el navegador un momento antes.
+      // Ahora la caché local (localStorage) es la fuente de la verdad, y
+      // AppSheet solo se consulta cuando el usuario presiona "Sincronizar".
       renderFromLocalCache();
     }
 
@@ -1050,7 +1927,7 @@
       document.getElementById('stat-count').textContent = count;
       document.getElementById('stat-completed').textContent = completed;
       document.getElementById('stat-pending').textContent = pending;
-      document.getElementById('stat-revenue').textContent = `${revenue.toFixed(2)} €`;
+      document.getElementById('stat-revenue').textContent = `${revenue.toFixed(2)} $`;
     }
 
     // Filter and Render PREVENTAS in table
@@ -1084,6 +1961,7 @@
         
         // Formulate items count string
         const itemsCount = p.detalles ? p.detalles.reduce((sum, item) => sum + item.cantidad, 0) : 0;
+        const formattedItemsCount = Number(itemsCount.toFixed(3));
         const itemsDistinct = p.detalles ? p.detalles.length : 0;
 
         // Status Badge Style
@@ -1103,10 +1981,10 @@
           <td class="py-3 px-6 text-slate-300 font-medium">${p.fecha}</td>
           <td class="py-3 px-6">
             <span class="bg-slate-700 text-slate-300 text-xs px-2.5 py-0.5 rounded-full font-semibold">
-              ${itemsCount} u. <span class="text-[10px] text-slate-400">(${itemsDistinct} ref)</span>
+              ${formattedItemsCount} u. <span class="text-[10px] text-slate-400">(${itemsDistinct} ref)</span>
             </span>
           </td>
-          <td class="py-3 px-6 text-right font-black text-emerald-400 font-mono text-base">${p.total.toFixed(2)} €</td>
+          <td class="py-3 px-6 text-right font-black text-emerald-400 font-mono text-base">${p.total.toFixed(2)} $</td>
           <td class="py-3 px-6 text-center">
             <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${badgeClass}">
               ${p.estado}
@@ -1152,34 +2030,31 @@
       tr.innerHTML = `
         <td class="py-2 px-4 relative">
           <div class="relative" id="product-dropdown-container-${rowIndex}">
-            <div class="flex items-center bg-slate-900 border border-slate-700 rounded-lg overflow-hidden cursor-pointer" onclick="toggleProductDropdown(${rowIndex}, event)">
-              <input type="text" readonly id="product-display-${rowIndex}" placeholder="Seleccionar producto..." class="w-full bg-transparent px-3 py-1.5 text-xs text-white focus:outline-none cursor-pointer" required value="${getProductName(producto)}">
-              <div class="px-2 text-slate-400 flex items-center justify-center">
+            <div class="flex items-center bg-slate-900 border border-slate-700 rounded-lg overflow-hidden">
+              <input type="text" id="product-display-${rowIndex}" autocomplete="off" onfocus="toggleProductDropdown(${rowIndex}, event)" oninput="filterProductDropdown(${rowIndex}, this.value)" placeholder="Buscar o seleccionar producto..." class="w-full bg-transparent px-3 py-1.5 text-xs text-white focus:outline-none" required value="${getProductName(producto)}">
+              <div class="px-2 text-slate-400 flex items-center justify-center cursor-pointer" onclick="toggleProductDropdown(${rowIndex}, event)">
                 <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
               </div>
             </div>
 
-            <div id="product-panel-${rowIndex}" class="hidden absolute left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 p-2 space-y-2 max-h-60 flex flex-col" onclick="event.stopPropagation()">
-              <div class="relative flex-shrink-0">
-                <input type="text" id="product-search-${rowIndex}" placeholder="Buscar producto..." oninput="filterProductDropdown(${rowIndex}, this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-emerald-500">
-              </div>
-              <div id="product-options-${rowIndex}" class="overflow-y-auto flex-1 space-y-0.5 max-h-40">
+            <div id="product-panel-${rowIndex}" class="hidden absolute left-0 md:w-[500px] min-w-[450px] mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 p-2 max-h-[350px] flex flex-col" onclick="event.stopPropagation()">
+              <div id="product-options-${rowIndex}" class="overflow-y-auto flex-1 space-y-0.5 max-h-80">
                 <!-- Filter options -->
               </div>
             </div>
           </div>
         </td>
         <td class="py-2 px-3">
-          <input type="number" value="${cantidad}" min="1" step="1" onchange="updateFormItem(${rowIndex}, 'cantidad', this.value)" required class="w-full text-center px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
+          <input type="number" value="${cantidad}" min="0.001" step="any" oninput="updateFormItem(${rowIndex}, 'cantidad', this.value)" required class="w-full text-center px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
         </td>
         <td class="py-2 px-3">
           <div class="relative">
-            <input type="number" value="${precio_unitario}" min="0" step="0.01" onchange="updateFormItem(${rowIndex}, 'precio_unitario', this.value)" required class="w-full text-right pr-6 pl-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
-            <span class="absolute right-2 top-2 text-[10px] text-slate-500">€</span>
+            <input type="number" value="${precio_unitario}" min="0" step="0.01" oninput="updateFormItem(${rowIndex}, 'precio_unitario', this.value)" required class="w-full text-right pr-6 pl-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 transition-all">
+            <span class="absolute right-2 top-2 text-[10px] text-slate-500">$</span>
           </div>
         </td>
         <td class="py-2 px-4 text-right font-mono text-slate-300 text-xs font-semibold" id="form-subtotal-${rowIndex}">
-          ${(cantidad * precio_unitario).toFixed(2)} €
+          ${(cantidad * precio_unitario).toFixed(2)} $
         </td>
         <td class="py-2 px-2 text-center">
           <button type="button" onclick="removeDetailRow(${rowIndex})" class="text-slate-500 hover:text-red-400 p-1.5 hover:bg-slate-800 rounded-lg transition-colors">
@@ -1219,7 +2094,7 @@
       if (key === 'producto') {
         formItems[index].producto = value;
       } else if (key === 'cantidad') {
-        formItems[index].cantidad = parseInt(value) || 0;
+        formItems[index].cantidad = parseFloat(value) || 0.0;
       } else if (key === 'precio_unitario') {
         formItems[index].precio_unitario = parseFloat(value) || 0.0;
       }
@@ -1228,17 +2103,241 @@
       const sub = (formItems[index].cantidad * formItems[index].precio_unitario).toFixed(2);
       const subEl = document.getElementById(`form-subtotal-${index}`);
       if (subEl) {
-        subEl.textContent = `${sub} €`;
+        subEl.textContent = `${sub} $`;
       }
 
       calculateFormTotal();
+    }
+
+    // Update live ticket preview inside pre-sale creation/edition modal
+    function updateFormTicketPreview() {
+      const id = document.getElementById('form-id').value || 'NUEVA';
+      const cliente = document.getElementById('form-cliente').value || 'CLIENTE';
+      const telefono = document.getElementById('form-telefono').value || 'SIN CONTACTO';
+      const fecha = document.getElementById('form-fecha').value || new Date().toISOString().split('T')[0];
+
+      document.getElementById('form-ticket-id').textContent = id.replace('2026-01-M1P505-', '');
+      document.getElementById('form-ticket-fecha').textContent = fecha;
+      document.getElementById('form-ticket-cliente').textContent = cliente.toUpperCase();
+      document.getElementById('form-ticket-telefono').textContent = telefono.toUpperCase();
+
+      const container = document.getElementById('form-ticket-items-body');
+      container.innerHTML = '';
+
+      const activeRows = formItems.filter(item => item !== null && item.producto.trim() !== '');
+
+      if (activeRows.length === 0) {
+        container.innerHTML = '<div class="text-[9px] text-slate-400 py-1 text-center">Sin artículos</div>';
+        document.getElementById('form-ticket-total').textContent = '0.00 $';
+        return;
+      }
+
+      let grandTotal = 0.0;
+
+      activeRows.forEach(item => {
+        const subtotal = item.cantidad * item.precio_unitario;
+        grandTotal += subtotal;
+
+        const matchedProd = productosGlobal.find(p => p.material === item.producto);
+        const nameToDisplay = matchedProd && matchedProd.TextoBreveDelMaterial ? matchedProd.TextoBreveDelMaterial : item.producto;
+
+        const div = document.createElement('div');
+        div.className = "space-y-0.5";
+        div.innerHTML = `
+          <div class="flex justify-between">
+            <span class="font-bold truncate max-w-[170px]">${nameToDisplay.toUpperCase()}</span>
+            <span>${subtotal.toFixed(2)} $</span>
+          </div>
+          <div class="text-[8px] text-slate-500 pl-2">
+            ${Number(item.cantidad.toFixed(3))} UNID x ${item.precio_unitario.toFixed(2)} $
+          </div>
+        `;
+        container.appendChild(div);
+      });
+
+      document.getElementById('form-ticket-total').textContent = `${grandTotal.toFixed(2)} $`;
+    }
+
+    // Flag to handle printing immediately after successful save
+    let printAfterSave = false;
+
+    function submitFormWithPrint() {
+      printAfterSave = true;
+      document.getElementById('hidden-form-submit').click();
     }
 
     // Calculate grand total in form
     function calculateFormTotal() {
       const activeRows = formItems.filter(item => item !== null);
       const grandTotal = activeRows.reduce((sum, item) => sum + (item.cantidad * item.precio_unitario), 0);
-      document.getElementById('form-grand-total').textContent = `${grandTotal.toFixed(2)} €`;
+      document.getElementById('form-grand-total').textContent = `${grandTotal.toFixed(2)} $`;
+      updateFormTicketPreview();
+    }
+
+    // ============================================================
+    // CATÁLOGO / CARRITO — selección visual de productos (estilo
+    // tienda pública Ferre Tormer) para armar la preventa sin
+    // depender de ningún backend externo.
+    // ============================================================
+    let catalogCart = {}; // { material: { material, nombre, precio, qty } }
+
+    function openCatalogModal() {
+      catalogCart = {};
+      const modal = document.getElementById('catalog-modal');
+      const card = document.getElementById('catalog-modal-card');
+      document.getElementById('catalog-search').value = '';
+      modal.classList.remove('hidden');
+      renderCatalogGrid();
+      setTimeout(() => {
+        card.classList.remove('scale-95', 'opacity-0');
+        card.classList.add('scale-100', 'opacity-100');
+      }, 30);
+      lucide.createIcons();
+    }
+
+    function closeCatalogModal() {
+      const modal = document.getElementById('catalog-modal');
+      const card = document.getElementById('catalog-modal-card');
+      card.classList.remove('scale-100', 'opacity-100');
+      card.classList.add('scale-95', 'opacity-0');
+      setTimeout(() => { modal.classList.add('hidden'); }, 200);
+    }
+
+    function renderCatalogGrid() {
+      const q = (document.getElementById('catalog-search').value || '').toLowerCase().trim();
+      const grid = document.getElementById('catalog-grid');
+      const empty = document.getElementById('catalog-empty');
+
+      const filtered = productosGlobal.filter(p => {
+        return (p.TextoBreveDelMaterial || '').toLowerCase().includes(q) ||
+               (p.material || '').toLowerCase().includes(q);
+      });
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
+
+      grid.innerHTML = filtered.map(p => {
+        const qtyInCart = catalogCart[p.material] ? catalogCart[p.material].qty : 0;
+        const safeName = (p.TextoBreveDelMaterial || 'Sin nombre').replace(/'/g, "&#39;");
+        return `
+          <div class="bg-slate-900 border border-slate-700 rounded-xl p-3 flex flex-col hover:border-emerald-500/50 transition-colors">
+            <p class="text-[10px] font-mono text-slate-500 mb-1">${p.material}</p>
+            <h5 class="text-xs font-bold text-white leading-snug mb-2 flex-1 line-clamp-3">${safeName}</h5>
+            <p class="text-emerald-400 font-black text-sm mb-2">${(p.precio || 0).toFixed(2)} $</p>
+            <div class="flex items-center gap-1.5">
+              <button type="button" onclick="changeCatalogQty('${p.material}', -1)" class="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 text-xs">–</button>
+              <span class="flex-1 text-center text-xs font-bold text-white" id="catalog-qty-${p.material}">${qtyInCart}</span>
+              <button type="button" onclick="changeCatalogQty('${p.material}', 1)" class="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 text-xs">+</button>
+            </div>
+            <button type="button" onclick="addOneToCatalogCart('${p.material}')" class="mt-2 w-full bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold py-1.5 rounded-lg transition-all flex items-center justify-center gap-1">
+              <i data-lucide="plus" class="w-3 h-3"></i> Añadir
+            </button>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function addOneToCatalogCart(material) {
+      const prod = productosGlobal.find(p => p.material === material);
+      if (!prod) return;
+      if (!catalogCart[material]) {
+        catalogCart[material] = { material, nombre: prod.TextoBreveDelMaterial, precio: prod.precio || 0, qty: 0 };
+      }
+      catalogCart[material].qty++;
+      syncCatalogQtyBadge(material);
+      renderCatalogCartSummary();
+    }
+
+    function changeCatalogQty(material, delta) {
+      const prod = productosGlobal.find(p => p.material === material);
+      if (!prod) return;
+      if (!catalogCart[material]) {
+        catalogCart[material] = { material, nombre: prod.TextoBreveDelMaterial, precio: prod.precio || 0, qty: 0 };
+      }
+      catalogCart[material].qty = Math.max(0, catalogCart[material].qty + delta);
+      if (catalogCart[material].qty === 0) delete catalogCart[material];
+      syncCatalogQtyBadge(material);
+      renderCatalogCartSummary();
+    }
+
+    function syncCatalogQtyBadge(material) {
+      const el = document.getElementById(`catalog-qty-${material}`);
+      if (el) el.textContent = catalogCart[material] ? catalogCart[material].qty : 0;
+    }
+
+    function removeCatalogCartItem(material) {
+      delete catalogCart[material];
+      syncCatalogQtyBadge(material);
+      renderCatalogCartSummary();
+    }
+
+    function renderCatalogCartSummary() {
+      const items = Object.values(catalogCart);
+      const container = document.getElementById('catalog-cart-items');
+      const countEl = document.getElementById('catalog-cart-count');
+      const totalEl = document.getElementById('catalog-cart-total');
+
+      countEl.textContent = items.reduce((a, i) => a + i.qty, 0);
+
+      if (items.length === 0) {
+        container.innerHTML = '<p class="text-xs text-slate-500">Aún no has añadido productos.</p>';
+        totalEl.textContent = '0.00 $';
+        return;
+      }
+
+      let grand = 0;
+      container.innerHTML = items.map(item => {
+        const sub = item.qty * item.precio;
+        grand += sub;
+        return `
+          <div class="flex items-center justify-between gap-2 bg-slate-800/60 border border-slate-700 rounded-lg px-2.5 py-2">
+            <div class="flex-1 min-w-0">
+              <p class="text-[11px] font-semibold text-white truncate">${item.nombre}</p>
+              <p class="text-[10px] text-slate-400">${item.qty} x ${item.precio.toFixed(2)} $</p>
+            </div>
+            <span class="text-[11px] font-bold text-emerald-400">${sub.toFixed(2)} $</span>
+            <button type="button" onclick="removeCatalogCartItem('${item.material}')" class="text-slate-500 hover:text-red-400 p-1">
+              <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        `;
+      }).join('');
+      totalEl.textContent = `${grand.toFixed(2)} $`;
+      lucide.createIcons();
+    }
+
+    // Vuelca el carrito del catálogo dentro del detalle de la preventa
+    // (formItems), sumando cantidades si el producto ya estaba agregado.
+    function confirmCatalogCart() {
+      const items = Object.values(catalogCart);
+      if (items.length === 0) {
+        showToast('No has añadido ningún producto del catálogo.', 'warning');
+        return;
+      }
+
+      items.forEach(item => {
+        const existingIndex = formItems.findIndex(f => f !== null && f.producto === item.material);
+        if (existingIndex !== -1) {
+          formItems[existingIndex].cantidad += item.qty;
+          updateFormItem(existingIndex, 'cantidad', formItems[existingIndex].cantidad);
+          const displayInput = document.getElementById(`product-display-${existingIndex}`);
+          const qtyInput = document.querySelector(`#form-row-${existingIndex} input[type="number"]`);
+          if (qtyInput) qtyInput.value = formItems[existingIndex].cantidad;
+        } else {
+          addDetailRow(item.material, item.qty, item.precio);
+        }
+      });
+
+      showToast(`${items.length} producto(s) agregado(s) al detalle de la preventa`, 'success');
+      catalogCart = {};
+      closeCatalogModal();
+      calculateFormTotal();
     }
 
     // Modal Control: Create
@@ -1252,9 +2351,10 @@
       document.getElementById('form-fecha').value = new Date().toISOString().split('T')[0];
       document.getElementById('form-items-body').innerHTML = '';
       document.getElementById('form-items-empty').classList.remove('hidden');
-      document.getElementById('form-grand-total').textContent = '0.00 €';
+      document.getElementById('form-grand-total').textContent = '0.00 $';
       
       formItems = [];
+      printAfterSave = false;
 
       // Set titles
       document.getElementById('form-modal-title').textContent = 'Nueva Preventa';
@@ -1271,6 +2371,7 @@
       }, 50);
 
       lucide.createIcons();
+      updateFormTicketPreview();
     }
 
     // Modal Control: Edit
@@ -1317,6 +2418,7 @@
 
       lucide.createIcons();
       calculateFormTotal();
+      updateFormTicketPreview();
     }
 
     // Close Create/Edit Modal
@@ -1359,120 +2461,222 @@
       };
 
       try {
-        const preventasLocal = lsGet(LS_KEYS.preventa);
-        const detallesLocal = lsGet(LS_KEYS.detalle);
-        const totalCalculado = filteredDetails.reduce((sum, it) => sum + (parseFloat(it.cantidad) || 0) * (parseFloat(it.precio_unitario) || 0), 0);
-
+        // Intentar guardar primero mediante la API del servidor local
+        let response;
         if (id) {
-          // Editar
-          const idx = preventasLocal.findIndex(p => p.id === id);
-          if (idx === -1) throw new Error('Preventa no encontrada en la caché local');
-          preventasLocal[idx] = { ...preventasLocal[idx], cliente, telefono, fecha, estado, notas, total: totalCalculado };
-
-          const oldDetails = detallesLocal.filter(d => d.preventa_id === id);
-          const remaining = detallesLocal.filter(d => d.preventa_id !== id);
-          const newDetalles = filteredDetails.map(item => ({
-            id: 'det-' + Math.random().toString(36).substring(2, 10),
-            preventa_id: id,
-            producto: item.producto,
-            cantidad: parseFloat(item.cantidad) || 0,
-            precio_unitario: parseFloat(item.precio_unitario) || 0,
-            subtotal: (parseFloat(item.cantidad) || 0) * (parseFloat(item.precio_unitario) || 0)
-          }));
-
-          lsSet(LS_KEYS.detalle, [...remaining, ...newDetalles]);
-          lsSet(LS_KEYS.preventa, preventasLocal);
-
-          // Propagar a AppSheet (no bloqueante: si falla, el cambio ya quedó local)
-          await callAppSheetAPI("Preventa", "Edit", [{
-            IDTransacion: id, IDcliente: cliente, NombreDelCliente: cliente, FECHA: fecha,
-            total: String(totalCalculado), Estado: estado || 'Pendiente', Notas: notas || ''
-          }]).catch(err => console.error("AppSheet Edit Preventa falló:", err));
-
-          if (oldDetails.length > 0) {
-            await callAppSheetAPI("DETALLE_PREVENTA", "Delete", oldDetails.map(d => ({ IDDETALLE: String(d.id) })))
-              .catch(err => console.error("AppSheet Delete detalles falló:", err));
-          }
-
-          const nowPut = new Date();
-          const formattedDateTimePut = `${String(nowPut.getDate()).padStart(2, '0')}/${String(nowPut.getMonth()+1).padStart(2, '0')}/${nowPut.getFullYear()} ${String(nowPut.getHours()).padStart(2, '0')}:${String(nowPut.getMinutes()).padStart(2, '0')}:${String(nowPut.getSeconds()).padStart(2, '0')}`;
-
-          const dRows = newDetalles.map(item => ({
-            IDDETALLE: String(item.id), IDTransaccion: id, ARTICULO: item.producto,
-            CANTIDAD: String(item.cantidad), PRECIO: String(item.precio_unitario),
-            'TOTAL LINEA': String(item.subtotal),
-            FechaYHora: formattedDateTimePut,
-            pdf: `${item.id}.pdf`,
-            pdf_Bytes: "JVBERi0xLjQKJSAgIiB0ZXN0IGZpbGUgZm9yIGp1bGVz",
-            Cliente: cliente,
-            NombreDelCliente: cliente
-          }));
-          await callAppSheetAPI("DETALLE_PREVENTA", "Add", dRows).catch(err => console.error("AppSheet Add detalles falló:", err));
+          response = await fetch(`/api/preventas/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
         } else {
-          // Crear and respect the correlative structure "2026-01-M1P505-"
-          const prefix = "2026-01-M1P505-";
-          let maxNum = 0;
-          for (const p of preventasLocal) {
-            if (p.id && p.id.startsWith(prefix)) {
-              const suffix = p.id.substring(prefix.length);
-              const num = parseInt(suffix, 10);
-              if (!isNaN(num) && num > maxNum) {
-                maxNum = num;
-              }
-            }
-          }
-          if (maxNum === 0) {
-            maxNum = 331; // fallback default
-          }
-          const newId = prefix + (maxNum + 1);
-
-          const newPreventa = { id: newId, cliente, telefono, fecha, total: totalCalculado, estado: estado || 'Pendiente', notas };
-          const newDetalles = filteredDetails.map(item => ({
-            id: 'det-' + Math.random().toString(36).substring(2, 10),
-            preventa_id: newId,
-            producto: item.producto,
-            cantidad: parseFloat(item.cantidad) || 0,
-            precio_unitario: parseFloat(item.precio_unitario) || 0,
-            subtotal: (parseFloat(item.cantidad) || 0) * (parseFloat(item.precio_unitario) || 0)
-          }));
-
-          lsSet(LS_KEYS.preventa, [...preventasLocal, newPreventa]);
-          lsSet(LS_KEYS.detalle, [...detallesLocal, ...newDetalles]);
-
-          await callAppSheetAPI("Preventa", "Add", [{
-            IDTransacion: newId, IDcliente: cliente, NombreDelCliente: cliente, FECHA: fecha,
-            total: String(totalCalculado), Estado: estado || 'Pendiente', Notas: notas || ''
-          }]).catch(err => console.error("AppSheet Add Preventa falló:", err));
-
-          const nowAdd = new Date();
-          const formattedDateTimeAdd = `${String(nowAdd.getDate()).padStart(2, '0')}/${String(nowAdd.getMonth()+1).padStart(2, '0')}/${nowAdd.getFullYear()} ${String(nowAdd.getHours()).padStart(2, '0')}:${String(nowAdd.getMinutes()).padStart(2, '0')}:${String(nowAdd.getSeconds()).padStart(2, '0')}`;
-
-          const dRows = newDetalles.map(item => ({
-            IDDETALLE: String(item.id), IDTransaccion: newId, ARTICULO: item.producto,
-            CANTIDAD: String(item.cantidad), PRECIO: String(item.precio_unitario),
-            'TOTAL LINEA': String(item.subtotal),
-            FechaYHora: formattedDateTimeAdd,
-            pdf: `${item.id}.pdf`,
-            pdf_Bytes: "JVBERi0xLjQKJSAgIiB0ZXN0IGZpbGUgZm9yIGp1bGVz",
-            Cliente: cliente,
-            NombreDelCliente: cliente
-          }));
-          await callAppSheetAPI("DETALLE_PREVENTA", "Add", dRows).catch(err => console.error("AppSheet Add detalles falló:", err));
+          response = await fetch('/api/preventas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
         }
 
-        showToast(id ? 'Preventa actualizada correctamente' : 'Nueva preventa guardada', 'success');
+        if (response.ok) {
+          const savedPreventa = await response.json();
+          let savedId = savedPreventa.id;
 
-        // Refresh data
-        renderFromLocalCache();
+          showToast(id ? 'Preventa actualizada correctamente' : 'Nueva preventa guardada', 'success');
 
-        // Close modal
-        closeFormModal();
+          if (savedPreventa.appsheet_warnings && savedPreventa.appsheet_warnings.length > 0) {
+            savedPreventa.appsheet_warnings.forEach(w => showToast('AppSheet: ' + w, 'warning'));
+          }
 
-        // Mock sheets webhook trigger as well
-        triggerMockSheetSync();
-      } catch (err) {
-        console.error(err);
-        showToast(err.message, 'error');
+          // Refrescar lista y caché desde el servidor
+          await fetchPreventas();
+
+          closeFormModal();
+
+          if (printAfterSave && savedId) {
+            setTimeout(() => {
+              triggerPrint(savedId);
+            }, 300);
+          }
+          return; // Finalizar con éxito
+        } else {
+          const errData = await response.json();
+          throw new Error(errData.error || 'Error en el servidor backend.');
+        }
+      } catch (serverErr) {
+        console.warn("Error al guardar en el servidor backend, usando fallback local y directo a AppSheet:", serverErr.message);
+
+        // FALLBACK: Guardado local directo en localStorage + AppSheet API (flujo 100% frontend)
+        try {
+          const preventasLocal = lsGet(LS_KEYS.preventa);
+          const detallesLocal = lsGet(LS_KEYS.detalle);
+          const totalCalculado = filteredDetails.reduce((sum, it) => sum + (parseFloat(it.cantidad) || 0) * (parseFloat(it.precio_unitario) || 0), 0);
+
+          // Buscar el ID real del cliente (columna IDcliente en AppSheet) a
+          // partir del nombre escrito en el formulario. Si no existe en el
+          // directorio local, se usa el nombre como respaldo.
+          const clienteMatch = clientesGlobal.find(c => c.nombre.toLowerCase() === cliente.toLowerCase());
+          const idClienteAppSheet = clienteMatch ? clienteMatch.id : cliente;
+
+          // Esta app no maneja IVA/impuestos todavía, así que por ahora se
+          // reporta impuesto = 0 y subtotal = total. Si manejas IVA, avisa
+          // el porcentaje y lo agregamos al cálculo.
+          const impuestoCalculado = 0;
+          const subtotalCalculado = totalCalculado - impuestoCalculado;
+
+          let savedId = id;
+
+          if (id) {
+            // Editar local
+            const idx = preventasLocal.findIndex(p => p.id === id);
+            if (idx === -1) throw new Error('Preventa no encontrada en la caché local');
+            preventasLocal[idx] = { ...preventasLocal[idx], cliente, telefono, fecha, estado, notas, total: totalCalculado };
+
+            const oldDetails = detallesLocal.filter(d => d.preventa_id === id);
+            const remaining = detallesLocal.filter(d => d.preventa_id !== id);
+            const newDetalles = filteredDetails.map(item => ({
+              id: 'det-' + Math.random().toString(36).substring(2, 10),
+              preventa_id: id,
+              producto: item.producto,
+              cantidad: parseFloat(item.cantidad) || 0,
+              precio_unitario: parseFloat(item.precio_unitario) || 0,
+              subtotal: (parseFloat(item.cantidad) || 0) * (parseFloat(item.precio_unitario) || 0)
+            }));
+
+            lsSet(LS_KEYS.detalle, [...remaining, ...newDetalles]);
+            lsSet(LS_KEYS.preventa, preventasLocal);
+
+            // Propagar a AppSheet (no bloqueante) — tabla "Preventa"
+            await callAppSheetAPI("Preventa", "Edit", [{
+              IDTransacion: id,
+              FECHA: fecha,
+              IDcliente: idClienteAppSheet,
+              NombreDelCliente: cliente,
+              subtotal: String(subtotalCalculado),
+              impuesto: String(impuestoCalculado),
+              total: String(totalCalculado),
+              PrecioSinIva: String(subtotalCalculado),
+              Iva: String(impuestoCalculado),
+              Direccion: '',
+              Notas: notas || '',
+              Estado: estado || 'Pendiente'
+            }]).catch(err => console.error("AppSheet Edit Preventa falló:", err));
+
+            if (oldDetails.length > 0) {
+              await callAppSheetAPI("DETALLE_PREVENTA", "Delete", oldDetails.map(d => ({ IDDETALLE: String(d.id) })))
+                .catch(err => console.error("AppSheet Delete detalles falló:", err));
+            }
+
+            const nowPut = new Date();
+            const formattedDateTimePut = `${String(nowPut.getDate()).padStart(2, '0')}/${String(nowPut.getMonth()+1).padStart(2, '0')}/${nowPut.getFullYear()} ${String(nowPut.getHours()).padStart(2, '0')}:${String(nowPut.getMinutes()).padStart(2, '0')}:${String(nowPut.getSeconds()).padStart(2, '0')}`;
+
+            const dRows = newDetalles.map(item => {
+              const prodInfo = productosGlobal.find(p => p.material === item.producto);
+              return {
+                IDDETALLE: String(item.id),
+                IDTransaccion: id, // debe coincidir con el IDTransacion de la Preventa
+                CANTIDAD: String(item.cantidad),
+                ARTICULO: item.producto,
+                PRECIO: String(item.precio_unitario),
+                IMPUESTO: '0',
+                'TOTAL LINEA': String(item.subtotal),
+                TextoBreve: prodInfo ? prodInfo.TextoBreveDelMaterial : item.producto,
+                PRECIOSS: String(item.precio_unitario),
+                CambioDePrecio: '0',
+                NumeroDeFactura: id,
+                Cliente: cliente,
+                NombreDelCliente: cliente,
+                FechaYHora: formattedDateTimePut,
+                TotalPreventaCount: String(totalCalculado)
+              };
+            });
+            await callAppSheetAPI("DETALLE_PREVENTA", "Add", dRows).catch(err => console.error("AppSheet Add detalles falló:", err));
+          } else {
+            // Crear local
+            const prefix = "2026-01-M1P505-";
+            let maxNum = 0;
+            for (const p of preventasLocal) {
+              if (p.id && p.id.startsWith(prefix)) {
+                const suffix = p.id.substring(prefix.length);
+                const num = parseInt(suffix, 10);
+                if (!isNaN(num) && num > maxNum) {
+                  maxNum = num;
+                }
+              }
+            }
+            if (maxNum === 0) {
+              maxNum = 331; // fallback default
+            }
+            const newId = prefix + (maxNum + 1);
+            savedId = newId;
+
+            const newPreventa = { id: newId, cliente, telefono, fecha, total: totalCalculado, estado: estado || 'Pendiente', notas };
+            const newDetalles = filteredDetails.map(item => ({
+              id: 'det-' + Math.random().toString(36).substring(2, 10),
+              preventa_id: newId,
+              producto: item.producto,
+              cantidad: parseFloat(item.cantidad) || 0,
+              precio_unitario: parseFloat(item.precio_unitario) || 0,
+              subtotal: (parseFloat(item.cantidad) || 0) * (parseFloat(item.precio_unitario) || 0)
+            }));
+
+            lsSet(LS_KEYS.preventa, [...preventasLocal, newPreventa]);
+            lsSet(LS_KEYS.detalle, [...detallesLocal, ...newDetalles]);
+
+            await callAppSheetAPI("Preventa", "Add", [{
+              IDTransacion: newId,
+              FECHA: fecha,
+              IDcliente: idClienteAppSheet,
+              NombreDelCliente: cliente,
+              subtotal: String(subtotalCalculado),
+              impuesto: String(impuestoCalculado),
+              total: String(totalCalculado),
+              PrecioSinIva: String(subtotalCalculado),
+              Iva: String(impuestoCalculado),
+              Direccion: '',
+              Notas: notas || '',
+              Estado: estado || 'Pendiente'
+            }]).catch(err => console.error("AppSheet Add Preventa falló:", err));
+
+            const nowAdd = new Date();
+            const formattedDateTimeAdd = `${String(nowAdd.getDate()).padStart(2, '0')}/${String(nowAdd.getMonth()+1).padStart(2, '0')}/${nowAdd.getFullYear()} ${String(nowAdd.getHours()).padStart(2, '0')}:${String(nowAdd.getMinutes()).padStart(2, '0')}:${String(nowAdd.getSeconds()).padStart(2, '0')}`;
+
+            const dRows = newDetalles.map(item => {
+              const prodInfo = productosGlobal.find(p => p.material === item.producto);
+              return {
+                IDDETALLE: String(item.id),
+                IDTransaccion: newId, // debe coincidir con el IDTransacion de la Preventa
+                CANTIDAD: String(item.cantidad),
+                ARTICULO: item.producto,
+                PRECIO: String(item.precio_unitario),
+                IMPUESTO: '0',
+                'TOTAL LINEA': String(item.subtotal),
+                TextoBreve: prodInfo ? prodInfo.TextoBreveDelMaterial : item.producto,
+                PRECIOSS: String(item.precio_unitario),
+                CambioDePrecio: '0',
+                NumeroDeFactura: newId,
+                Cliente: cliente,
+                NombreDelCliente: cliente,
+                FechaYHora: formattedDateTimeAdd,
+                TotalPreventaCount: String(totalCalculado)
+              };
+            });
+            await callAppSheetAPI("DETALLE_PREVENTA", "Add", dRows).catch(err => console.error("AppSheet Add detalles falló:", err));
+          }
+
+          showToast(id ? 'Preventa actualizada localmente' : 'Nueva preventa guardada localmente', 'success');
+          renderFromLocalCache();
+          closeFormModal();
+          triggerMockSheetSync();
+
+          if (printAfterSave && savedId) {
+            setTimeout(() => {
+              triggerPrint(savedId);
+            }, 300);
+          }
+        } catch (localErr) {
+          console.error(localErr);
+          showToast("Error al guardar localmente: " + localErr.message, 'error');
+        }
       }
     }
 
@@ -1480,26 +2684,45 @@
     async function confirmDelete(id, name) {
       if (confirm(`¿Está seguro de eliminar la preventa de "${name}"? Se borrarán todos los detalles asociados en cascada.`)) {
         try {
-          const preventasLocal = lsGet(LS_KEYS.preventa);
-          const detallesLocal = lsGet(LS_KEYS.detalle);
-          const oldDetails = detallesLocal.filter(d => d.preventa_id === id);
+          // Intentar eliminar primero mediante la API del servidor
+          const response = await fetch(`/api/preventas/${id}`, {
+            method: 'DELETE'
+          });
 
-          lsSet(LS_KEYS.preventa, preventasLocal.filter(p => p.id !== id));
-          lsSet(LS_KEYS.detalle, detallesLocal.filter(d => d.preventa_id !== id));
-
-          if (oldDetails.length > 0) {
-            await callAppSheetAPI("DETALLE_PREVENTA", "Delete", oldDetails.map(d => ({ IDDETALLE: String(d.id) })))
-              .catch(err => console.error("AppSheet Delete detalles falló:", err));
+          if (response.ok) {
+            showToast('Preventa eliminada con éxito', 'success');
+            await fetchPreventas();
+            return;
+          } else {
+            const errData = await response.json();
+            throw new Error(errData.error || 'Error al eliminar en el servidor backend.');
           }
-          await callAppSheetAPI("Preventa", "Delete", [{ IDTransacion: String(id) }])
-            .catch(err => console.error("AppSheet Delete Preventa falló:", err));
+        } catch (serverErr) {
+          console.warn("Error al eliminar en el servidor backend, usando fallback local:", serverErr.message);
 
-          showToast('Preventa eliminada con éxito', 'success');
-          renderFromLocalCache();
-          triggerMockSheetSync();
-        } catch (err) {
-          console.error(err);
-          showToast(err.message, 'error');
+          // FALLBACK local y directo a AppSheet
+          try {
+            const preventasLocal = lsGet(LS_KEYS.preventa);
+            const detallesLocal = lsGet(LS_KEYS.detalle);
+            const oldDetails = detallesLocal.filter(d => d.preventa_id === id);
+
+            lsSet(LS_KEYS.preventa, preventasLocal.filter(p => p.id !== id));
+            lsSet(LS_KEYS.detalle, detallesLocal.filter(d => d.preventa_id !== id));
+
+            if (oldDetails.length > 0) {
+              await callAppSheetAPI("DETALLE_PREVENTA", "Delete", oldDetails.map(d => ({ IDDETALLE: String(d.id) })))
+                .catch(err => console.error("AppSheet Delete detalles falló:", err));
+            }
+            await callAppSheetAPI("Preventa", "Delete", [{ IDTransacion: String(id) }])
+              .catch(err => console.error("AppSheet Delete Preventa falló:", err));
+
+            showToast('Preventa eliminada con éxito (local)', 'success');
+            renderFromLocalCache();
+            triggerMockSheetSync();
+          } catch (localErr) {
+            console.error(localErr);
+            showToast("Error al eliminar localmente: " + localErr.message, 'error');
+          }
         }
       }
     }
@@ -1536,9 +2759,9 @@
           tr.className = "hover:bg-slate-800/20 transition-colors";
           tr.innerHTML = `
             <td class="py-2.5 px-4 text-slate-200 font-semibold">${d.producto}</td>
-            <td class="py-2.5 px-3 text-center text-slate-300 font-mono">${d.cantidad} u.</td>
-            <td class="py-2.5 px-3 text-right text-slate-400 font-mono">${d.precio_unitario.toFixed(2)} €</td>
-            <td class="py-2.5 px-4 text-right font-black text-emerald-400 font-mono">${d.subtotal.toFixed(2)} €</td>
+            <td class="py-2.5 px-3 text-center text-slate-300 font-mono">${Number(d.cantidad.toFixed(3))} u.</td>
+            <td class="py-2.5 px-3 text-right text-slate-400 font-mono">${d.precio_unitario.toFixed(2)} $</td>
+            <td class="py-2.5 px-4 text-right font-black text-emerald-400 font-mono">${d.subtotal.toFixed(2)} $</td>
           `;
           tbody.appendChild(tr);
         });
@@ -1563,17 +2786,23 @@
           div.innerHTML = `
             <div class="flex justify-between">
               <span class="font-bold truncate max-w-[170px]">${nameToDisplay.toUpperCase()}</span>
-              <span>${d.subtotal.toFixed(2)} €</span>
+              <span>${d.subtotal.toFixed(2)} $</span>
             </div>
             <div class="text-[8px] text-slate-500 pl-2">
-              ${d.cantidad} UNID x ${d.precio_unitario.toFixed(2)} €
+              ${Number(d.cantidad.toFixed(3))} UNID x ${d.precio_unitario.toFixed(2)} $
             </div>
           `;
           ticketBody.appendChild(div);
         });
       }
 
-      document.getElementById('ticket-total').textContent = `${p.total.toFixed(2)} €`;
+      document.getElementById('ticket-total').textContent = `${p.total.toFixed(2)} $`;
+
+      // Generar el código QR real de esta preventa
+      const qrContainer = document.getElementById('view-ticket-qr');
+      if (qrContainer) {
+        qrContainer.innerHTML = buildQrImgTag(`PREVENTA-${p.id}`, 3);
+      }
 
       // Save ID on print button
       document.getElementById('detail-modal').setAttribute('data-active-id', p.id);
@@ -1618,7 +2847,16 @@
 
       const canvas = document.getElementById('print-ticket-area');
 
-      // Populate items
+      // Leer la configuración real de la plantilla de ticket (conectada con el editor)
+      let ticketCfg;
+      try {
+        const raw = localStorage.getItem('ticket_config');
+        ticketCfg = raw ? JSON.parse(raw) : DEFAULT_TICKET_CONFIG;
+      } catch (e) {
+        ticketCfg = DEFAULT_TICKET_CONFIG;
+      }
+
+      // Populate items (vinculados al detalle real de la preventa)
       let itemsHtml = '';
       p.detalles.forEach(d => {
         const matchedProd = productosGlobal.find(pr => pr.material === d.producto);
@@ -1627,10 +2865,10 @@
           <div style="margin-bottom: 5px;">
             <div style="display: flex; justify-content: space-between;">
               <span style="font-weight: bold; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${nameToDisplay.toUpperCase()}</span>
-              <span>${d.subtotal.toFixed(2)} €</span>
+              <span>${d.subtotal.toFixed(2)} $</span>
             </div>
             <div style="font-size: 10px; color: #555; padding-left: 10px;">
-              ${d.text_qty_price || (d.cantidad + ' UNID x ' + d.precio_unitario.toFixed(2) + ' €')}
+              ${Number(d.cantidad.toFixed(3))} UNID x ${d.precio_unitario.toFixed(2)} $
             </div>
           </div>
         `;
@@ -1639,10 +2877,9 @@
       canvas.innerHTML = `
         <div style="text-align: center; margin-bottom: 15px;">
           <img src="Logoferre.png" alt="Logo" style="margin: 0 auto 10px auto; display: block; height: 50px; max-height: 50px; object-fit: contain;">
-          <h4 style="font-size: 16px; font-weight: 900; letter-spacing: 2px; margin: 0 0 5px 0;">*** APP SHEEP ***</h4>
-          <p style="font-size: 10px; color: #444; margin: 0 0 3px 0;">SISTEMA INTEGRADO APPSHEET</p>
-          <p style="font-size: 9px; color: #666; margin: 0;">Calle Ganadería S/N, Badajoz</p>
-          <p style="font-size: 9px; color: #666; margin: 0;">Telf: +34 900 123 456</p>
+          <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.slogan}</p>
+          <h4 style="font-size: 13px; font-weight: bold; margin: 0 0 2px 0;">${ticketCfg.company}</h4>
+          <p style="font-size: 11px; color: #444; margin: 0 0 5px 0;">${ticketCfg.nit}</p>
         </div>
 
         <div style="font-size: 11px; margin-bottom: 12px; line-height: 1.3;">
@@ -1667,28 +2904,19 @@
         <div style="font-size: 11px; text-align: right; line-height: 1.4;">
           <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 900; border-top: 1px dashed #333; padding-top: 6px;">
             <span>TOTAL:</span>
-            <span>${p.total.toFixed(2)} €</span>
+            <span>${p.total.toFixed(2)} $</span>
           </div>
         </div>
 
         <p style="letter-spacing: -1px; margin: 15px 0 10px 0; color: #666; font-size: 12px;">------------------------------------</p>
 
         <div style="text-align: center; font-size: 10px; line-height: 1.3;">
-          <p style="font-weight: bold; margin: 3px 0;">¡GRACIAS POR SU PREFERENCIA!</p>
-          <p style="color: #666; font-size: 9px; margin: 0 0 12px 0;">Documento No Válido como Factura</p>
+          <p style="font-weight: bold; margin: 3px 0;">${ticketCfg.footer1}</p>
+          <p style="color: #666; font-size: 9px; margin: 0 0 12px 0;">${ticketCfg.footer2}</p>
           
           <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
-            <!-- Barcode representation -->
-            <div style="width: 100px; height: 25px; background: black; display: flex; justify-content: space-between; padding: 0 5px; box-sizing: border-box;">
-              <div style="width: 2px; height: 100%; background: white;"></div>
-              <div style="width: 4px; height: 100%; background: white;"></div>
-              <div style="width: 1px; height: 100%; background: white;"></div>
-              <div style="width: 3px; height: 100%; background: white;"></div>
-              <div style="width: 2px; height: 100%; background: white;"></div>
-              <div style="width: 1px; height: 100%; background: white;"></div>
-              <div style="width: 4px; height: 100%; background: white;"></div>
-            </div>
-            <span style="font-size: 8px; color: #777; font-family: monospace;">*APP-SHEEP-PREVENTA-${p.id}*</span>
+            ${buildQrImgTag(`PREVENTA-${p.id}`, 3)}
+            <span style="font-size: 8px; color: #777; font-family: monospace;">*PREVENTA-${p.id}*</span>
           </div>
         </div>
       `;
@@ -1707,21 +2935,44 @@
       showToast('Contactando servidores de App Sheep (AppSheet)...', 'info');
 
       try {
-        await syncFromAppSheetToLocal();
+        // Intentar sincronizar a través del backend local
+        const response = await fetch('/api/appsheet-sync', {
+          method: 'POST'
+        });
 
-        setTimeout(() => {
-          syncIcon.classList.remove('animate-spin');
-          updateAppSheetSyncTime();
-          showToast('Sincronización de base de datos bidireccional exitosa', 'success');
-          // Refresh clients and products after full sync
-          fetchClientesAndProductos();
-          renderFromLocalCache();
-        }, 1200);
-
+        if (response.ok) {
+          setTimeout(async () => {
+            syncIcon.classList.remove('animate-spin');
+            updateAppSheetSyncTime();
+            showToast('Sincronización de base de datos bidireccional exitosa', 'success');
+            // Refrescar datos locales del backend
+            await fetchClientesAndProductos();
+            await fetchPreventas();
+          }, 1200);
+          return;
+        } else {
+          throw new Error('Error de respuesta en el backend.');
+        }
       } catch (err) {
-        console.error(err);
-        syncIcon.classList.remove('animate-spin');
-        showToast('No se pudo contactar AppSheet, usando caché local', 'error');
+        console.warn("No se pudo contactar con el backend para sincronizar, usando flujo directo frontend:", err.message);
+
+        // FALLBACK: Sincronización directa desde el frontend
+        try {
+          await syncFromAppSheetToLocal();
+
+          setTimeout(() => {
+            syncIcon.classList.remove('animate-spin');
+            updateAppSheetSyncTime();
+            showToast('Sincronización de base de datos bidireccional exitosa (local)', 'success');
+            // Refresh clients and products after full sync
+            fetchClientesAndProductos();
+            renderFromLocalCache();
+          }, 1200);
+        } catch (localErr) {
+          console.error(localErr);
+          syncIcon.classList.remove('animate-spin');
+          showToast('No se pudo contactar AppSheet ni el backend', 'error');
+        }
       }
     }
 
@@ -1792,6 +3043,182 @@
           toast.remove();
         }, 300);
       }, 3500);
+    }
+
+    // Configuración de la Plantilla de Ticket
+    const DEFAULT_TICKET_CONFIG = {
+      slogan: "Calidad y confianza en nuestros productos",
+      company: "Juan Carlos Torres García",
+      nit: "NIT: 0507-271277-101-0",
+      footer1: "¡GRACIAS POR SU PREFERENCIA!",
+      footer2: "Este documento no tiene validez fiscal"
+    };
+
+    function loadTicketConfig() {
+      let config;
+      try {
+        const raw = localStorage.getItem('ticket_config');
+        config = raw ? JSON.parse(raw) : DEFAULT_TICKET_CONFIG;
+      } catch (e) {
+        config = DEFAULT_TICKET_CONFIG;
+      }
+      // Fill input fields in Sidebar
+      document.getElementById('config-slogan').value = config.slogan || '';
+      document.getElementById('config-company').value = config.company || '';
+      document.getElementById('config-nit').value = config.nit || '';
+      document.getElementById('config-footer1').value = config.footer1 || '';
+      document.getElementById('config-footer2').value = config.footer2 || '';
+
+      applyTicketConfig(config);
+    }
+
+    function saveAndApplyTicketConfig() {
+      const config = {
+        slogan: document.getElementById('config-slogan').value,
+        company: document.getElementById('config-company').value,
+        nit: document.getElementById('config-nit').value,
+        footer1: document.getElementById('config-footer1').value,
+        footer2: document.getElementById('config-footer2').value
+      };
+      localStorage.setItem('ticket_config', JSON.stringify(config));
+      applyTicketConfig(config);
+    }
+
+    function resetTicketConfigToDefault() {
+      localStorage.setItem('ticket_config', JSON.stringify(DEFAULT_TICKET_CONFIG));
+      loadTicketConfig();
+      showToast('Valores de plantilla restablecidos', 'info');
+    }
+
+    // Tab switching mechanism
+    function switchTab(tabId) {
+      const tabIds = ['preventas', 'template', 'productos', 'clientes'];
+
+      // Hide all tabs
+      tabIds.forEach(id => {
+        const el = document.getElementById(`tab-view-${id}`);
+        if (el) el.classList.add('hidden');
+
+        // Reset nav button styles
+        const btn = document.getElementById(`nav-btn-${id}`);
+        if (btn) {
+          btn.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent";
+        }
+      });
+
+      // Show selected tab
+      const activeEl = document.getElementById(`tab-view-${tabId}`);
+      if (activeEl) {
+        if (tabId === 'template') {
+          activeEl.classList.remove('hidden');
+          activeEl.className = "grid grid-cols-1 lg:grid-cols-12 gap-8";
+        } else {
+          activeEl.classList.remove('hidden');
+        }
+      }
+
+      // Style active button
+      const activeBtn = document.getElementById(`nav-btn-${tabId}`);
+      if (activeBtn) {
+        // If sidebar is collapsed, keep center alignment styling
+        const sidebar = document.getElementById('app-sidebar');
+        if (sidebar && sidebar.classList.contains('sidebar-collapsed')) {
+          activeBtn.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all bg-emerald-600 text-white shadow-lg shadow-emerald-600/10 justify-center !px-0";
+        } else {
+          activeBtn.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all bg-emerald-600 text-white shadow-lg shadow-emerald-600/10";
+        }
+      }
+    }
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('app-sidebar');
+      const toggleIcon = document.getElementById('sidebar-toggle-icon');
+      if (!sidebar) return;
+
+      const isCollapsed = sidebar.classList.toggle('sidebar-collapsed');
+
+      if (isCollapsed) {
+        sidebar.classList.remove('lg:w-80');
+        sidebar.classList.add('lg:w-24');
+        if (toggleIcon) {
+          toggleIcon.setAttribute('data-lucide', 'chevron-right');
+        }
+      } else {
+        sidebar.classList.remove('lg:w-24');
+        sidebar.classList.add('lg:w-80');
+        if (toggleIcon) {
+          toggleIcon.setAttribute('data-lucide', 'chevron-left');
+        }
+      }
+
+      // Update currently active tab button center alignment
+      const activeBtn = document.querySelector('nav button.bg-emerald-600');
+      if (activeBtn) {
+        if (isCollapsed) {
+          activeBtn.classList.add('justify-center', '!px-0');
+        } else {
+          activeBtn.classList.remove('justify-center', '!px-0');
+        }
+      }
+
+      lucide.createIcons();
+    }
+
+    // Genera el HTML de un código QR real (offline, sin depender de servicios externos)
+    function buildQrImgTag(text, cellSize) {
+      try {
+        const qr = qrcode(0, 'M'); // typeNumber 0 = auto-detect según longitud del texto
+        qr.addData(text);
+        qr.make();
+        return qr.createImgTag(cellSize || 3, 0);
+      } catch (e) {
+        console.error('Error generando el código QR:', e.message);
+        return '';
+      }
+    }
+
+    function applyTicketConfig(config) {
+      const c = config || DEFAULT_TICKET_CONFIG;
+
+      // Update form ticket preview
+      const formSlogan = document.getElementById('form-ticket-slogan');
+      if (formSlogan) formSlogan.textContent = c.slogan;
+      const formCompany = document.getElementById('form-ticket-company');
+      if (formCompany) formCompany.textContent = c.company;
+      const formNit = document.getElementById('form-ticket-nit');
+      if (formNit) formNit.textContent = c.nit;
+      const formFooter1 = document.getElementById('form-ticket-footer1');
+      if (formFooter1) formFooter1.textContent = c.footer1;
+      const formFooter2 = document.getElementById('form-ticket-footer2');
+      if (formFooter2) formFooter2.textContent = c.footer2;
+
+      // Update view ticket preview
+      const viewSlogan = document.getElementById('view-ticket-slogan');
+      if (viewSlogan) viewSlogan.textContent = c.slogan;
+      const viewCompany = document.getElementById('view-ticket-company');
+      if (viewCompany) viewCompany.textContent = c.company;
+      const viewNit = document.getElementById('view-ticket-nit');
+      if (viewNit) viewNit.textContent = c.nit;
+      const viewFooter1 = document.getElementById('view-ticket-footer1');
+      if (viewFooter1) viewFooter1.textContent = c.footer1;
+      const viewFooter2 = document.getElementById('view-ticket-footer2');
+      if (viewFooter2) viewFooter2.textContent = c.footer2;
+
+      // Update dedicated template view preview
+      const tabSlogan = document.getElementById('preview-tab-slogan');
+      if (tabSlogan) tabSlogan.textContent = c.slogan;
+      const tabCompany = document.getElementById('preview-tab-company');
+      if (tabCompany) tabCompany.textContent = c.company;
+      const tabNit = document.getElementById('preview-tab-nit');
+      if (tabNit) tabNit.textContent = c.nit;
+      const tabFooter1 = document.getElementById('preview-tab-footer1');
+      if (tabFooter1) tabFooter1.textContent = c.footer1;
+      const tabFooter2 = document.getElementById('preview-tab-footer2');
+      if (tabFooter2) tabFooter2.textContent = c.footer2;
+
+      // QR de ejemplo para la vista previa de la plantilla
+      const tabQr = document.getElementById('preview-tab-qr');
+      if (tabQr) tabQr.innerHTML = buildQrImgTag('PREVENTA-00332', 3);
     }
   </script>
 </body>

@@ -36,7 +36,7 @@ db.exec(`
     id TEXT PRIMARY KEY,
     preventa_id TEXT NOT NULL,
     producto TEXT NOT NULL,
-    cantidad INTEGER NOT NULL DEFAULT 1,
+    cantidad REAL NOT NULL DEFAULT 1.0,
     precio_unitario REAL NOT NULL DEFAULT 0.0,
     subtotal REAL NOT NULL DEFAULT 0.0,
     FOREIGN KEY (preventa_id) REFERENCES Preventa(id) ON DELETE CASCADE
@@ -82,14 +82,14 @@ if (countStock.count === 0) {
     VALUES (?, ?, ?, ?)
   `);
   db.transaction(() => {
-    insertStock.run('Saco-01', 'Saco de Alimento Premium Ovejas 25kg', 45.00, 'Saco de Alimento Premium Ovejas 25kg [Saco-01] - 45.00 €');
-    insertStock.run('Sup-01', 'Suplemento Vitamínico Ovino 5L', 40.50, 'Suplemento Vitamínico Ovino 5L [Sup-01] - 40.50 €');
-    insertStock.run('Esq-01', 'Esquiladora Profesional SheepCut', 210.00, 'Esquiladora Profesional SheepCut [Esq-01] - 210.00 €');
-    insertStock.run('Cuc-01', 'Cuchillas de repuesto SheepCut 4T', 20.00, 'Cuchillas de repuesto SheepCut 4T [Cuc-01] - 20.00 €');
-    insertStock.run('Ide-01', 'Identificadores de Oreja (Pack 100u)', 25.00, 'Identificadores de Oreja (Pack 100u) [Ide-01] - 25.00 €');
-    insertStock.run('Ten-01', 'Tenaza Aplicadora de Crotales', 35.00, 'Tenaza Aplicadora de Crotales [Ten-01] - 35.00 €');
-    insertStock.run('PRI-000233', 'UNI TORNILLO PARA BISAGRA DE 1/2"', 0.10, 'PRI-000233 UNI TORNILLO PARA BISAGRA DE 1/2" Inventario en almacén 5980 - 0.10 €');
-    insertStock.run('PRI-000148', 'PZA REMACHE POP 1/8X1/2 44523', 0.03, 'PRI-000148 PZA REMACHE POP 1/8X1/2 44523 Inventario en almacén 552 - 0.03 €');
+    insertStock.run('Saco-01', 'Saco de Alimento Premium Ovejas 25kg', 45.00, 'Saco de Alimento Premium Ovejas 25kg [Saco-01] - 45.00 $');
+    insertStock.run('Sup-01', 'Suplemento Vitamínico Ovino 5L', 40.50, 'Suplemento Vitamínico Ovino 5L [Sup-01] - 40.50 $');
+    insertStock.run('Esq-01', 'Esquiladora Profesional SheepCut', 210.00, 'Esquiladora Profesional SheepCut [Esq-01] - 210.00 $');
+    insertStock.run('Cuc-01', 'Cuchillas de repuesto SheepCut 4T', 20.00, 'Cuchillas de repuesto SheepCut 4T [Cuc-01] - 20.00 $');
+    insertStock.run('Ide-01', 'Identificadores de Oreja (Pack 100u)', 25.00, 'Identificadores de Oreja (Pack 100u) [Ide-01] - 25.00 $');
+    insertStock.run('Ten-01', 'Tenaza Aplicadora de Crotales', 35.00, 'Tenaza Aplicadora de Crotales [Ten-01] - 35.00 $');
+    insertStock.run('PRI-000233', 'UNI TORNILLO PARA BISAGRA DE 1/2"', 0.10, 'PRI-000233 UNI TORNILLO PARA BISAGRA DE 1/2" Inventario en almacén 5980 - 0.10 $');
+    insertStock.run('PRI-000148', 'PZA REMACHE POP 1/8X1/2 44523', 0.03, 'PRI-000148 PZA REMACHE POP 1/8X1/2 44523 Inventario en almacén 552 - 0.03 $');
   })();
 }
 
@@ -157,6 +157,13 @@ if (countPreventas.count === 0) {
 
 // AppSheet API Helper function
 async function callAppSheetAPI(tableName, action, rows = [], selector = null) {
+  const result = await callAppSheetAPIVerbose(tableName, action, rows, selector);
+  return result.ok ? result.data : null;
+}
+
+// Versión detallada: además de los datos, devuelve el error real que responde AppSheet
+// para poder mostrarlo en la respuesta de la API en vez de que quede oculto en los logs.
+async function callAppSheetAPIVerbose(tableName, action, rows = [], selector = null) {
   const url = `https://api.appsheet.com/api/v2/apps/${APPSHEET_APP_ID}/tables/${encodeURIComponent(tableName)}/Action`;
 
   const payload = {
@@ -190,24 +197,49 @@ async function callAppSheetAPI(tableName, action, rows = [], selector = null) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`AppSheet API Error on table ${tableName} (status ${response.status}):`, errorText);
-      return null;
+      return { ok: false, status: response.status, data: null, errorText };
     }
 
     const text = await response.text();
     if (!text || text.length === 0) {
-      return [];
+      if (rows && rows.length > 0 && (action === "Add" || "Edit" === action)) {
+        const warn = `AppSheet respondió 200 OK pero sin ningún dato de confirmación (cuerpo vacío) al intentar ${action} en "${tableName}". Es posible que la fila no se haya guardado realmente; revisa que todos los nombres de columna coincidan exactamente con los de tu hoja.`;
+        console.error(warn);
+        return { ok: false, status: response.status, data: [], errorText: warn };
+      }
+      return { ok: true, status: response.status, data: [], errorText: null };
     }
 
+    let parsed;
     try {
-      return JSON.parse(text);
+      parsed = JSON.parse(text);
     } catch (e) {
       console.error("Failed to parse AppSheet response JSON:", e.message, "Response was:", text);
-      return [];
+      return { ok: true, status: response.status, data: [], errorText: null };
     }
+
+    if (parsed && !Array.isArray(parsed) && (parsed.error || parsed.Error || parsed.errors || parsed.message)) {
+      const bodyError = parsed.error || parsed.Error || parsed.errors || parsed.message;
+      console.error(`AppSheet API devolvió 200 OK pero con error en el cuerpo (tabla ${tableName}):`, JSON.stringify(bodyError));
+      return { ok: false, status: response.status, data: null, errorText: typeof bodyError === 'string' ? bodyError : JSON.stringify(bodyError) };
+    }
+
+    if (rows && rows.length > 0 && (action === "Add" || action === "Edit") && Array.isArray(parsed) && parsed.length === 0) {
+      const warn = `AppSheet respondió 200 OK pero confirmó 0 de ${rows.length} fila(s) al hacer ${action} en "${tableName}". Probablemente rechazó la fila por una validación (columna requerida, tipo de dato o Ref inválida) sin devolver el detalle del error.`;
+      console.error(warn);
+      return { ok: false, status: response.status, data: [], errorText: warn };
+    }
+
+    return { ok: true, status: response.status, data: parsed, errorText: null };
   } catch (error) {
     console.error(`Fetch error connecting to AppSheet API:`, error.message);
-    return null;
+    return { ok: false, status: null, data: null, errorText: error.message };
   }
+}
+
+// Pequeña espera para evitar condiciones de carrera
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 // Sync function to pull from AppSheet and update local SQLite cache
@@ -218,7 +250,6 @@ async function syncFromAppSheetToSQLite() {
   const clientesFromAppSheet = await callAppSheetAPI("clientes", "Find");
   const stockFromAppSheet = await callAppSheetAPI("stock", "Find");
 
-  // Sync CLIENTES if returned
   if (Array.isArray(clientesFromAppSheet) && clientesFromAppSheet.length > 0) {
     db.prepare('DELETE FROM CLIENTES').run();
     const insertCliente = db.prepare(`
@@ -226,7 +257,6 @@ async function syncFromAppSheetToSQLite() {
       VALUES (?, ?, ?)
     `);
     for (const c of clientesFromAppSheet) {
-      // normalize keys to support robust case insensitivity
       const cNormalized = {};
       for (const k of Object.keys(c)) {
         cNormalized[k.toLowerCase()] = c[k];
@@ -240,7 +270,6 @@ async function syncFromAppSheetToSQLite() {
     }
   }
 
-  // Sync STOCK if returned
   if (Array.isArray(stockFromAppSheet) && stockFromAppSheet.length > 0) {
     db.prepare('DELETE FROM STOCK').run();
     const insertStock = db.prepare(`
@@ -255,7 +284,7 @@ async function syncFromAppSheetToSQLite() {
       const material = sNormalized.material || '';
       const textobrevedelmaterial = s.TextoBreveDelMaterial || sNormalized.textobrevedelmaterial || '';
       const precioVal = parseFloat(s.Precio || sNormalized.precio) || 0.0;
-      const concat = sNormalized.concat || '';
+      const concat = (sNormalized.concat || '').replace(/€/g, '$');
       if (material && concat) {
         insertStock.run(material, textobrevedelmaterial, precioVal, concat);
       }
@@ -265,7 +294,6 @@ async function syncFromAppSheetToSQLite() {
   if (Array.isArray(preventasFromAppSheet) && preventasFromAppSheet.length > 0) {
     console.log(`Syncing ${preventasFromAppSheet.length} preventas from AppSheet...`);
     db.transaction(() => {
-      // Clear local tables
       db.prepare('DELETE FROM DETALLE_PREVENTA').run();
       db.prepare('DELETE FROM Preventa').run();
 
@@ -287,7 +315,6 @@ async function syncFromAppSheetToSQLite() {
         const estado = p.Estado || p.estado || 'Pendiente';
         const notas = p.Notas || p.notas || '';
 
-        // Resolve customer telephone if we can
         let telefono = '';
         if (idcliente) {
           const clientRow = db.prepare('SELECT telefono FROM CLIENTES WHERE id = ? OR nombre = ?').get(idcliente, idcliente);
@@ -296,15 +323,7 @@ async function syncFromAppSheetToSQLite() {
           }
         }
 
-        insertPreventa.run(
-          idtransacion,
-          idcliente,
-          telefono,
-          fecha,
-          totalVal,
-          estado,
-          notas
-        );
+        insertPreventa.run(idtransacion, idcliente, telefono, fecha, totalVal, estado, notas);
       }
 
       if (Array.isArray(detallesFromAppSheet)) {
@@ -312,18 +331,11 @@ async function syncFromAppSheetToSQLite() {
           const iddetalle = d.IDDETALLE || d.iddetalle || d.id || '';
           const idtransaccion = d.IDTransaccion || d.idtransaccion || d.preventa_id || '';
           const articulo = d.ARTICULO || d.articulo || d.producto || '';
-          const cantidadVal = parseInt(d.CANTIDAD || d.cantidad) || 0;
+          const cantidadVal = parseFloat(d.CANTIDAD || d.cantidad) || 0.0;
           const precioVal = parseFloat(d.PRECIO || d.precio || d.precio_unitario) || 0.0;
           const subtotalVal = parseFloat(d['TOTAL LINEA'] || d.total_linea || d.subtotal) || (cantidadVal * precioVal);
 
-          insertDetalle.run(
-            iddetalle,
-            idtransaccion,
-            articulo,
-            cantidadVal,
-            precioVal,
-            subtotalVal
-          );
+          insertDetalle.run(iddetalle, idtransaccion, articulo, cantidadVal, precioVal, subtotalVal);
         }
       }
     })();
@@ -334,6 +346,83 @@ async function syncFromAppSheetToSQLite() {
 }
 
 // REST API Endpoints
+
+// POST /api/clientes - Create a new client
+app.post('/api/clientes', async (req, res) => {
+  const { id, nombre, telefono } = req.body;
+
+  if (!nombre) {
+    return res.status(400).json({ error: 'El nombre del cliente es obligatorio.' });
+  }
+
+  const clientId = id || 'cli-' + Math.random().toString(36).substring(2, 10);
+
+  try {
+    const insertCliente = db.prepare(`
+      INSERT INTO CLIENTES (id, nombre, telefono)
+      VALUES (?, ?, ?)
+    `);
+
+    insertCliente.run(clientId, nombre, telefono || '');
+
+    const cRow = {
+      idcliente: clientId,
+      nombrecliente: nombre,
+      telefono: telefono || '',
+      IDcliente: clientId,
+      NombreCliente: nombre,
+      ID: clientId,
+      Nombre: nombre
+    };
+
+    await callAppSheetAPI("clientes", "Add", [cRow]).catch(err => {
+      console.error("AppSheet API clientes Add failed:", err.message);
+    });
+
+    res.status(201).json({ id: clientId, nombre, telefono: telefono || '' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al guardar el cliente: ' + err.message });
+  }
+});
+
+// POST /api/productos - Create a new stock product
+app.post('/api/productos', async (req, res) => {
+  const { material, TextoBreveDelMaterial, precio } = req.body;
+
+  if (!material || !TextoBreveDelMaterial) {
+    return res.status(400).json({ error: 'El material (ID) y el TextoBreveDelMaterial son obligatorios.' });
+  }
+
+  const precioVal = parseFloat(precio) || 0.0;
+  const concat = `${TextoBreveDelMaterial} [${material}] - ${precioVal.toFixed(2)} $`;
+
+  try {
+    const insertStock = db.prepare(`
+      INSERT INTO STOCK (material, TextoBreveDelMaterial, precio, concat)
+      VALUES (?, ?, ?, ?)
+    `);
+
+    insertStock.run(material, TextoBreveDelMaterial, precioVal, concat);
+
+    const sRow = {
+      material: material,
+      TextoBreveDelMaterial: TextoBreveDelMaterial,
+      Precio: String(precioVal),
+      concat: concat,
+      precio: precioVal
+    };
+
+    await callAppSheetAPI("stock", "Add", [sRow]).catch(err => {
+      console.error("AppSheet API stock Add failed:", err.message);
+    });
+
+    res.status(201).json({ material, TextoBreveDelMaterial, precio: precioVal, concat });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al guardar el producto: ' + err.message });
+  }
+});
 
 // GET /api/clientes - Get all clients
 app.get('/api/clientes', (req, res) => {
@@ -360,14 +449,14 @@ app.get('/api/productos', (req, res) => {
 // GET /api/preventas - Get all pre-sales
 app.get('/api/preventas', async (req, res) => {
   try {
-    // Try syncing from AppSheet first
-    await syncFromAppSheetToSQLite().catch(err => {
-      console.warn("AppSheet Sync failed during GET, falling back to SQLite directly:", err.message);
-    });
+    if (req.query.sync === 'true') {
+      await syncFromAppSheetToSQLite().catch(err => {
+        console.warn("AppSheet Sync failed during GET, falling back to SQLite directly:", err.message);
+      });
+    }
 
     const preventas = db.prepare('SELECT * FROM Preventa ORDER BY fecha DESC, id DESC').all();
 
-    // For each preventa, fetch its details
     const preventasWithDetails = preventas.map(p => {
       const details = db.prepare('SELECT * FROM DETALLE_PREVENTA WHERE preventa_id = ?').all(p.id);
       return { ...p, detalles: details };
@@ -400,25 +489,25 @@ app.get('/api/preventas/:id', (req, res) => {
 
 // POST /api/preventas - Create a new pre-sale and its details
 app.post('/api/preventas', async (req, res) => {
-  const { cliente, telefono, fecha, estado, notas, detalles } = req.body;
+  const { cliente, telefono, fecha, total, estado, notas, detalles } = req.body;
 
   if (!cliente || !fecha || !detalles || !Array.isArray(detalles) || detalles.length === 0) {
-    return res.status(400).json({ error: 'Datos de preventa incompletos. Se requiere cliente, fecha y al menos un detalle.' });
+    return res.status(400).json({ error: 'Faltan datos obligatorios o detalles de preventa.' });
   }
 
   try {
-    // Calculate total from details to ensure correctness
     const totalCalculado = detalles.reduce((sum, item) => {
-      const qty = parseInt(item.cantidad) || 0;
-      const price = parseFloat(item.precio_unitario) || 0;
+      const qty = parseFloat(item.cantidad) || 0.0;
+      const price = parseFloat(item.precio_unitario) || 0.0;
       return sum + (qty * price);
     }, 0);
 
-    // Respect the correlative structure "2026-01-M1P505-"
     const prefix = "2026-01-M1P505-";
-    const allPreventas = db.prepare('SELECT id FROM Preventa').all();
     let maxNum = 0;
-    for (const p of allPreventas) {
+
+    // Scan local SQLite database
+    const allPreventasLocal = db.prepare('SELECT id FROM Preventa').all();
+    for (const p of allPreventasLocal) {
       if (p.id && p.id.startsWith(prefix)) {
         const suffix = p.id.substring(prefix.length);
         const num = parseInt(suffix, 10);
@@ -427,8 +516,28 @@ app.post('/api/preventas', async (req, res) => {
         }
       }
     }
+
+    // Scan AppSheet Preventa table
+    try {
+      const preventasFromAppSheet = await callAppSheetAPI("Preventa", "Find");
+      if (Array.isArray(preventasFromAppSheet)) {
+        for (const p of preventasFromAppSheet) {
+          const id = p.IDTransacion || p.idtransacion || p.id || '';
+          if (id && id.startsWith(prefix)) {
+            const suffix = id.substring(prefix.length);
+            const num = parseInt(suffix, 10);
+            if (!isNaN(num) && num > maxNum) {
+              maxNum = num;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Could not fetch AppSheet preventas to determine max suffix, using SQLite max only:", err.message);
+    }
+
     if (maxNum === 0) {
-      maxNum = 331; // fallback default
+      maxNum = 331;
     }
     const newId = prefix + (maxNum + 1);
 
@@ -442,7 +551,6 @@ app.post('/api/preventas', async (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?)
     `);
 
-    // Use transaction for safe local creation
     const executeTransaction = db.transaction(() => {
       insertPreventa.run(
         newId,
@@ -461,13 +569,12 @@ app.post('/api/preventas', async (req, res) => {
         const item_id = 'det-' + Math.random().toString(36).substring(2, 10);
         const subtotal = item.cantidad * item.precio_unitario;
         insertDetalle.run(item_id, newId, item.producto, item.cantidad, item.precio_unitario, subtotal);
-        item.id = item_id; // Track the generated ID for detail
+        item.id = item_id;
       }
     });
 
     executeTransaction();
 
-    // Now send the changes to AppSheet cloud backend mapped to real columns
     const pRow = {
       IDTransacion: newId,
       IDcliente: cliente,
@@ -478,38 +585,56 @@ app.post('/api/preventas', async (req, res) => {
       Notas: notas || ''
     };
 
-    // Call Add action on AppSheet for Preventa
-    await callAppSheetAPI("Preventa", "Add", [pRow]).catch(err => {
-      console.error("AppSheet API Preventa Add failed:", err.message);
-    });
+    const preventaAppSheetResult = await callAppSheetAPIVerbose("Preventa", "Add", [pRow]);
+    if (!preventaAppSheetResult.ok) {
+      console.error("AppSheet API Preventa Add failed:", preventaAppSheetResult.errorText);
+    }
 
-    // Call Add action on AppSheet for DETALLE_PREVENTA
+    // Esperamos 4 segundos para asegurar que AppSheet registre la preventa "Padre"
+    await wait(4000);
+
     const now = new Date();
     const formattedDateTime = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth()+1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
 
-    const dRows = detalles.map(item => ({
-      IDDETALLE: String(item.id),
-      IDTransaccion: String(newId),
-      ARTICULO: item.producto,
-      CANTIDAD: String(item.cantidad),
-      PRECIO: String(item.precio_unitario),
-      'TOTAL LINEA': String(item.cantidad * item.precio_unitario),
-      FechaYHora: formattedDateTime,
-      pdf: `${item.id}.pdf`,
-      pdf_Bytes: "JVBERi0xLjQKJSAgIiB0ZXN0IGZpbGUgZm9yIGp1bGVz",
-      Cliente: cliente,
-      NombreDelCliente: cliente
-    }));
+    const getStockShortText = db.prepare('SELECT TextoBreveDelMaterial FROM STOCK WHERE material = ?');
 
-    await callAppSheetAPI("DETALLE_PREVENTA", "Add", dRows).catch(err => {
-      console.error("AppSheet API DETALLE_PREVENTA Add failed:", err.message);
+    const dRows = detalles.map(item => {
+      const stockRow = getStockShortText.get(item.producto);
+
+      const cantidadStr = String(item.cantidad).replace('.', ',');
+      const precioStr = String(item.precio_unitario).replace('.', ',');
+      const totalLineaStr = String(item.cantidad * item.precio_unitario).replace('.', ',');
+
+      return {
+        IDDETALLE: String(item.id),
+        IDTransaccion: String(newId),
+        ARTICULO: String(item.producto),
+        CANTIDAD: cantidadStr,
+        PRECIO: precioStr,
+        IMPUESTO: "0",
+        'TOTAL LINEA': totalLineaStr,
+        TextoBreve: (stockRow && stockRow.TextoBreveDelMaterial) || String(item.producto),
+        CambioDePrecio: "Falso",
+        NumeroDeFactura: "",
+        FechaYHora: formattedDateTime,
+        Cliente: String(cliente),
+        NombreDelCliente: String(cliente)
+      };
     });
 
-    // Fetch and return the newly created preventa
+    const detalleAppSheetResult = await callAppSheetAPIVerbose("DETALLE_PREVENTA", "Add", dRows);
+    if (!detalleAppSheetResult.ok) {
+      console.error("AppSheet API DETALLE_PREVENTA Add failed:", detalleAppSheetResult.errorText);
+    }
+
     const createdPreventa = db.prepare('SELECT * FROM Preventa WHERE id = ?').get(newId);
     const createdDetails = db.prepare('SELECT * FROM DETALLE_PREVENTA WHERE preventa_id = ?').all(newId);
 
-    res.status(201).json({ ...createdPreventa, detalles: createdDetails });
+    const appsheet_warnings = [];
+    if (!preventaAppSheetResult.ok) appsheet_warnings.push(`Preventa no se sincronizó con AppSheet: ${preventaAppSheetResult.errorText}`);
+    if (!detalleAppSheetResult.ok) appsheet_warnings.push(`Detalle no se sincronizó con AppSheet: ${detalleAppSheetResult.errorText}`);
+
+    res.status(201).json({ ...createdPreventa, detalles: createdDetails, ...(appsheet_warnings.length ? { appsheet_warnings } : {}) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al guardar la preventa: ' + err.message });
@@ -522,37 +647,29 @@ app.put('/api/preventas/:id', async (req, res) => {
   const { cliente, telefono, fecha, estado, notas, detalles } = req.body;
 
   if (!cliente || !fecha || !detalles || !Array.isArray(detalles) || detalles.length === 0) {
-    return res.status(400).json({ error: 'Datos de preventa incompletos.' });
+    return res.status(400).json({ error: 'Faltan datos obligatorios o detalles de preventa.' });
   }
 
   try {
-    const existing = db.prepare('SELECT id FROM Preventa WHERE id = ?').get(id);
-    if (!existing) {
-      return res.status(404).json({ error: 'Preventa no encontrada' });
-    }
-
     const totalCalculado = detalles.reduce((sum, item) => {
-      const qty = parseInt(item.cantidad) || 0;
-      const price = parseFloat(item.precio_unitario) || 0;
+      const qty = parseFloat(item.cantidad) || 0.0;
+      const price = parseFloat(item.precio_unitario) || 0.0;
       return sum + (qty * price);
     }, 0);
 
     const updatePreventa = db.prepare(`
-      UPDATE Preventa
-      SET cliente = ?, telefono = ?, fecha = ?, total = ?, estado = ?, notas = ?
-      WHERE id = ?
+      UPDATE Preventa SET cliente = ?, telefono = ?, fecha = ?, total = ?, estado = ?, notas = ? WHERE id = ?
     `);
 
-    const deleteDetalles = db.prepare('DELETE FROM DETALLE_PREVENTA WHERE preventa_id = ?');
+    const deleteDetalles = db.prepare(`DELETE FROM DETALLE_PREVENTA WHERE preventa_id = ?`);
+
     const insertDetalle = db.prepare(`
       INSERT INTO DETALLE_PREVENTA (id, preventa_id, producto, cantidad, precio_unitario, subtotal)
       VALUES (?, ?, ?, ?, ?, ?)
     `);
 
-    // Retrieve old detail IDs from SQLite so we can delete them from AppSheet
     const oldDetails = db.prepare('SELECT id FROM DETALLE_PREVENTA WHERE preventa_id = ?').all(id);
 
-    // Perform inside transaction locally
     const executeTransaction = db.transaction(() => {
       updatePreventa.run(cliente, telefono || '', fecha, totalCalculado, estado || 'Pendiente', notas || '', id);
       deleteDetalles.run(id);
@@ -564,13 +681,12 @@ app.put('/api/preventas/:id', async (req, res) => {
         const item_id = 'det-' + Math.random().toString(36).substring(2, 10);
         const subtotal = item.cantidad * item.precio_unitario;
         insertDetalle.run(item_id, id, item.producto, item.cantidad, item.precio_unitario, subtotal);
-        item.id = item_id; // Track the new generated ID
+        item.id = item_id;
       }
     });
 
     executeTransaction();
 
-    // Now update AppSheet cloud tables
     const pRow = {
       IDTransacion: id,
       IDcliente: cliente,
@@ -581,125 +697,74 @@ app.put('/api/preventas/:id', async (req, res) => {
       Notas: notas || ''
     };
 
-    // Call Edit action on AppSheet for Preventa
-    await callAppSheetAPI("Preventa", "Edit", [pRow]).catch(err => {
-      console.error("AppSheet API Preventa Edit failed:", err.message);
-    });
-
-    // Delete old details on AppSheet
-    if (oldDetails.length > 0) {
-      const deleteRows = oldDetails.map(d => ({ IDDETALLE: String(d.id) }));
-      await callAppSheetAPI("DETALLE_PREVENTA", "Delete", deleteRows).catch(err => {
-        console.error("AppSheet API DETALLE_PREVENTA Delete failed:", err.message);
-      });
+    const preventaAppSheetResult = await callAppSheetAPIVerbose("Preventa", "Edit", [pRow]);
+    if (!preventaAppSheetResult.ok) {
+      console.error("AppSheet API Preventa Edit failed:", preventaAppSheetResult.errorText);
     }
 
-    // Add new details on AppSheet
+    let deleteAppSheetResult = { ok: true, errorText: null };
+    if (oldDetails.length > 0) {
+      const deleteRows = oldDetails.map(d => ({ IDDETALLE: String(d.id) }));
+      deleteAppSheetResult = await callAppSheetAPIVerbose("DETALLE_PREVENTA", "Delete", deleteRows);
+      if (!deleteAppSheetResult.ok) {
+        console.error("AppSheet API DETALLE_PREVENTA Delete failed:", deleteAppSheetResult.errorText);
+      }
+    }
+
+    // Esperamos 4 segundos para asegurar que AppSheet haya procesado los cambios del "Padre"
+    await wait(4000);
+
     const nowPut = new Date();
     const formattedDateTimePut = `${String(nowPut.getDate()).padStart(2, '0')}/${String(nowPut.getMonth()+1).padStart(2, '0')}/${nowPut.getFullYear()} ${String(nowPut.getHours()).padStart(2, '0')}:${String(nowPut.getMinutes()).padStart(2, '0')}:${String(nowPut.getSeconds()).padStart(2, '0')}`;
 
-    const dRows = detalles.map(item => ({
-      IDDETALLE: String(item.id),
-      IDTransaccion: String(id),
-      ARTICULO: item.producto,
-      CANTIDAD: String(item.cantidad),
-      PRECIO: String(item.precio_unitario),
-      'TOTAL LINEA': String(item.cantidad * item.precio_unitario),
-      FechaYHora: formattedDateTimePut,
-      pdf: `${item.id}.pdf`,
-      pdf_Bytes: "JVBERi0xLjQKJSAgIiB0ZXN0IGZpbGUgZm9yIGp1bGVz",
-      Cliente: cliente,
-      NombreDelCliente: cliente
-    }));
+    const getStockShortTextPut = db.prepare('SELECT TextoBreveDelMaterial FROM STOCK WHERE material = ?');
 
-    await callAppSheetAPI("DETALLE_PREVENTA", "Add", dRows).catch(err => {
-      console.error("AppSheet API DETALLE_PREVENTA Add failed:", err.message);
+    const dRows = detalles.map(item => {
+      const stockRow = getStockShortTextPut.get(item.producto);
+
+      const cantidadStr = String(item.cantidad).replace('.', ',');
+      const precioStr = String(item.precio_unitario).replace('.', ',');
+      const totalLineaStr = String(item.cantidad * item.precio_unitario).replace('.', ',');
+
+      return {
+        IDDETALLE: String(item.id),
+        IDTransaccion: String(id),
+        ARTICULO: String(item.producto),
+        CANTIDAD: cantidadStr,
+        PRECIO: precioStr,
+        IMPUESTO: "0",
+        'TOTAL LINEA': totalLineaStr,
+        TextoBreve: (stockRow && stockRow.TextoBreveDelMaterial) || String(item.producto),
+        CambioDePrecio: "Falso",
+        NumeroDeFactura: "",
+        FechaYHora: formattedDateTimePut,
+        Cliente: String(cliente),
+        NombreDelCliente: String(cliente)
+      };
     });
 
-    // Fetch and return the updated preventa
+    const detalleAppSheetResult = await callAppSheetAPIVerbose("DETALLE_PREVENTA", "Add", dRows);
+    if (!detalleAppSheetResult.ok) {
+      console.error("AppSheet API DETALLE_PREVENTA Add failed:", detalleAppSheetResult.errorText);
+    }
+
     const updatedPreventa = db.prepare('SELECT * FROM Preventa WHERE id = ?').get(id);
     const updatedDetails = db.prepare('SELECT * FROM DETALLE_PREVENTA WHERE preventa_id = ?').all(id);
 
-    res.json({ ...updatedPreventa, detalles: updatedDetails });
+    const appsheet_warnings = [];
+    if (!preventaAppSheetResult.ok) appsheet_warnings.push(`Preventa editada no se sincronizó con AppSheet: ${preventaAppSheetResult.errorText}`);
+    if (!detalleAppSheetResult.ok) appsheet_warnings.push(`Detalle nuevo no se sincronizó con AppSheet: ${detalleAppSheetResult.errorText}`);
+    if (!deleteAppSheetResult.ok) appsheet_warnings.push(`Fallo al borrar detalle viejo en AppSheet: ${deleteAppSheetResult.errorText}`);
+
+    res.json({ ...updatedPreventa, detalles: updatedDetails, ...(appsheet_warnings.length ? { appsheet_warnings } : {}) });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al actualizar la preventa: ' + err.message });
   }
 });
 
-// DELETE /api/preventas/:id - Delete a pre-sale
-app.delete('/api/preventas/:id', async (req, res) => {
-  const id = req.params.id;
-  try {
-    const existing = db.prepare('SELECT id FROM Preventa WHERE id = ?').get(id);
-    if (!existing) {
-      return res.status(404).json({ error: 'Preventa no encontrada' });
-    }
-
-    // Retrieve old detail IDs from SQLite so we can delete them from AppSheet
-    const oldDetails = db.prepare('SELECT id FROM DETALLE_PREVENTA WHERE preventa_id = ?').all(id);
-
-    // Cascade delete is active due to FOREIGN KEY ... ON DELETE CASCADE locally
-    db.prepare('DELETE FROM Preventa WHERE id = ?').run(id);
-
-    // Update AppSheet Cloud Tables
-    // Delete associated details first on AppSheet
-    if (oldDetails.length > 0) {
-      const deleteRows = oldDetails.map(d => ({ IDDETALLE: String(d.id) }));
-      await callAppSheetAPI("DETALLE_PREVENTA", "Delete", deleteRows).catch(err => {
-        console.error("AppSheet API DETALLE_PREVENTA Delete failed:", err.message);
-      });
-    }
-
-    // Delete parent row from AppSheet
-    await callAppSheetAPI("Preventa", "Delete", [{ IDTransacion: String(id) }]).catch(err => {
-      console.error("AppSheet API Preventa Delete failed:", err.message);
-    });
-
-    res.json({ message: 'Preventa eliminada con éxito', id });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Error al eliminar la preventa: ' + err.message });
-  }
-});
-
-// Mock AppSheet Status and Schema API
-app.get('/api/appsheet-status', (req, res) => {
-  res.json({
-    app_name: "App Sheep",
-    platform: "AppSheet (Google Cloud)",
-    sync_status: "Conectado",
-    last_sync: new Date().toISOString(),
-    tables_mapped: [
-      {
-        sheet_name: "Preventa",
-        columns: ["IDTransacion", "FECHA", "IDcliente", "total", "Estado", "Notas"],
-        appsheet_type: "Parent Table (Key: IDTransacion)"
-      },
-      {
-        sheet_name: "DETALLE_PREVENTA",
-        columns: ["IDDETALLE", "IDTransaccion", "ARTICULO", "CANTIDAD", "PRECIO", "TOTAL LINEA"],
-        appsheet_type: "Child Table (Key: IDDETALLE, Ref: IDTransaccion -> Preventa)"
-      }
-    ]
-  });
-});
-
-app.post('/api/appsheet-sync', async (req, res) => {
-  try {
-    await syncFromAppSheetToSQLite();
-    res.json({
-      success: true,
-      message: "Sincronización bidireccional exitosa con las Hojas de Cálculo de Google (App Sheep).",
-      timestamp: new Date().toISOString()
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: "Error de sincronización: " + err.message });
-  }
-});
-
-// Start server
+// Listener del servidor
 app.listen(port, () => {
-  console.log(`Server is running at http://localhost:${port}`);
+  console.log(`Servidor iniciado en el puerto ${port}`);
 });

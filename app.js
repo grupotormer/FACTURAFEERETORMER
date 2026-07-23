@@ -360,13 +360,18 @@ function renderCatalog() {
       const cartQty = inCart ? inCart.quantity : 0;
       const availableStock = stock - cartQty;
 
-      // Price display (editable input)
-      const priceDisplay = `
-        <div class="flex items-center justify-end gap-1">
-          <span class="text-xs text-slate-400">$</span>
-          <input type="number" value="${finalPrice}" min="0" step="any" oninput="updateCatalogProductPrice('${product.Material}', this.value)" class="w-20 text-right px-1 py-0.5 bg-white border border-slate-300 rounded text-xs font-semibold text-slate-800 focus:outline-none focus:border-primary-500 transition-all">
-        </div>
-      `;
+      // Price display
+      let priceDisplay = '';
+      if (hasOffer) {
+        priceDisplay = `
+          <div class="flex flex-col items-end">
+            <span class="font-bold text-red-600">$${finalPrice.toFixed(4)}</span>
+            <span class="text-[10px] text-slate-400 line-through">$${basePrice.toFixed(4)}</span>
+          </div>
+        `;
+      } else {
+        priceDisplay = `<span class="font-semibold text-slate-800">$${basePrice.toFixed(4)}</span>`;
+      }
 
       tr.innerHTML = `
         <td class="px-4 py-3">
@@ -469,35 +474,6 @@ window.removeFromCart = function(material) {
   renderCatalog();
 };
 
-// Update catalog product price directly and sync with cart if present
-window.updateCatalogProductPrice = function(material, value) {
-  const product = state.products.find(p => p.Material === material);
-  if (!product) return;
-  const newPrice = parseFloat(value) || 0.0;
-
-  // Update base price
-  product.Precio = newPrice;
-  // If has offer, also update PrecioOferta to stay consistent
-  if (product.PrecioOferta && parseFloat(product.PrecioOferta) > 0) {
-    product.PrecioOferta = newPrice;
-  }
-
-  // Find if it is in cart
-  const cartItem = state.cart.find(it => it.Material === material);
-  if (cartItem) {
-    cartItem.price = newPrice;
-
-    // Update line total in DOM instantly
-    const lineTotalEl = document.getElementById(`line-total-${material}`);
-    if (lineTotalEl) {
-      lineTotalEl.textContent = `$${(newPrice * cartItem.quantity).toFixed(2)}`;
-    }
-  }
-
-  // Re-render only cart to prevent catalog input focus loss while typing!
-  renderCart();
-};
-
 // Update item price in cart and dynamically refresh totals
 window.updateCartPrice = function(material, value) {
   const item = state.cart.find(it => it.Material === material);
@@ -509,16 +485,6 @@ window.updateCartPrice = function(material, value) {
   const lineTotalEl = document.getElementById(`line-total-${material}`);
   if (lineTotalEl) {
     lineTotalEl.textContent = `$${(newPrice * item.quantity).toFixed(2)}`;
-  }
-
-  // Also update catalog price input if it exists in DOM to keep both synced
-  // However we must be careful not to re-render catalog to avoid cursor focus issues.
-  const catalogProduct = state.products.find(p => p.Material === material);
-  if (catalogProduct) {
-    catalogProduct.Precio = newPrice;
-    if (catalogProduct.PrecioOferta && parseFloat(catalogProduct.PrecioOferta) > 0) {
-      catalogProduct.PrecioOferta = newPrice;
-    }
   }
 
   recalculateTotals();

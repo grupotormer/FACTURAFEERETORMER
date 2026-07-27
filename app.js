@@ -48,8 +48,23 @@ const totalIva = document.getElementById('total-iva');
 const totalGeneral = document.getElementById('total-general');
 const btnSubmitPreventa = document.getElementById('btn-submit-preventa');
 
+// Load ticket config from server and save to localStorage
+async function loadTicketConfig() {
+  try {
+    const response = await fetch('/api/ticket-config');
+    if (response.ok) {
+      const data = await response.json();
+      if (data) {
+        localStorage.setItem('ticket_config', JSON.stringify(data));
+      }
+    }
+  } catch (err) {
+    console.warn("Could not load ticket config from server:", err.message);
+  }
+}
+
 // Initialization
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // Replace Lucide placeholders with SVG icons
   if (window.lucide) {
     lucide.createIcons();
@@ -57,6 +72,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Set up event listeners
   setupEventListeners();
+
+  // Load Ticket Config from server
+  await loadTicketConfig();
 
   // Load Initial Data
   fetchInitialData();
@@ -765,7 +783,7 @@ function printTicket(transactionId, dateFormatted, preventaRow, detalleRows, cli
 
     canvas.innerHTML = `
       <div style="text-align: center; margin-bottom: 15px;">
-        <img src="Logoferre.png" alt="Logo" style="margin: 0 auto 10px auto; display: block; height: ${ticketCfg.logoSize || 50}px; max-height: ${ticketCfg.logoSize || 50}px; object-fit: contain;">
+        <img src="logoferre.png" alt="Logo" style="margin: 0 auto 10px auto; display: block; height: ${ticketCfg.logoSize || 50}px; max-height: ${ticketCfg.logoSize || 50}px; object-fit: contain;">
         <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.slogan}</p>
         <h4 style="font-size: 13px; font-weight: bold; margin: 0 0 2px 0;">${ticketCfg.company}</h4>
         <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.nit}</p>

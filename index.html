@@ -467,7 +467,7 @@
             <!-- Pre-populated preview card mimicking real ticket -->
             <div class="bg-white text-slate-900 p-6 rounded shadow-inner w-full max-w-[280px] font-mono text-xs border border-slate-300 leading-tight select-none pointer-events-none">
               <div class="text-center space-y-1 mb-4">
-                <img src="Logoferre.png" alt="Logo" id="preview-tab-logo" class="mx-auto w-auto object-contain mb-4" style="height: 50px;">
+                <img src="logoferre.png" alt="Logo" id="preview-tab-logo" class="mx-auto w-auto object-contain mb-4" style="height: 50px;">
                 <p id="preview-tab-slogan" class="text-[10px] text-slate-700">Calidad y Confianza en productos</p>
                 <h4 id="preview-tab-company" class="font-bold text-xs tracking-wide">Juan Carlo Torres Garcia</h4>
                 <p id="preview-tab-nit" class="text-[10px] text-slate-700">NIT: 0507-271277-101-0</p>
@@ -770,7 +770,7 @@
           <!-- Digital receipt container -->
           <div class="bg-white text-slate-900 p-5 rounded shadow-inner w-full max-w-[280px] font-mono text-xs border border-slate-300 leading-tight select-none pointer-events-none" id="form-digital-receipt">
             <div class="text-center space-y-1 mb-4">
-              <img src="Logoferre.png" alt="Logo" id="form-ticket-logo" class="mx-auto w-auto object-contain mb-4" style="height: 50px;">
+              <img src="logoferre.png" alt="Logo" id="form-ticket-logo" class="mx-auto w-auto object-contain mb-4" style="height: 50px;">
               <p id="form-ticket-slogan" class="text-[10px] text-slate-700">Calidad y confianza en nuestros productos</p>
               <h4 id="form-ticket-company" class="font-bold text-xs tracking-wide">Juan Carlos Torres García</h4>
               <p id="form-ticket-nit" class="text-[10px] text-slate-700">NIT: 0507-271277-101-0</p>
@@ -782,7 +782,7 @@
 
             <div class="space-y-1 text-[10px] mb-3">
               <p><strong>FECHA:</strong> <span id="form-ticket-fecha">YYYY-MM-DD</span></p>
-              <p><strong>TICKET:</strong> #00000<span id="form-ticket-id">0</span></p>
+              <p><strong>TICKET:</strong> #<span id="form-ticket-id">0</span></p>
               <p><strong>CLIENTE:</strong> <span id="form-ticket-cliente">CLIENTE</span></p>
               <p><strong>TELF:</strong> <span id="form-ticket-telefono">TELF</span></p>
             </div>
@@ -953,7 +953,7 @@
           <!-- The Ticket Preview Container (mimicking a physical receipt) -->
           <div class="bg-white text-slate-900 p-5 rounded shadow-inner w-full max-w-[280px] font-mono text-xs border border-slate-300 leading-tight select-none pointer-events-none" id="digital-receipt">
             <div class="text-center space-y-1 mb-4">
-              <img src="Logoferre.png" alt="Logo" id="view-ticket-logo" class="mx-auto w-auto object-contain mb-4" style="height: 50px;">
+              <img src="logoferre.png" alt="Logo" id="view-ticket-logo" class="mx-auto w-auto object-contain mb-4" style="height: 50px;">
               <p id="view-ticket-slogan" class="text-[10px] text-slate-700">Calidad y confianza en nuestros productos</p>
               <h4 id="view-ticket-company" class="font-bold text-xs tracking-wide">Juan Carlos Torres García</h4>
               <p id="view-ticket-nit" class="text-[10px] text-slate-700">NIT: 0507-271277-101-0</p>
@@ -965,7 +965,7 @@
 
             <div class="space-y-1 text-[10px] mb-3">
               <p><strong>FECHA:</strong> <span id="ticket-fecha">YYYY-MM-DD</span></p>
-              <p><strong>TICKET:</strong> #00000<span id="ticket-id">0</span></p>
+              <p><strong>TICKET:</strong> #<span id="ticket-id">0</span></p>
               <p><strong>CLIENTE:</strong> <span id="ticket-cliente">CLIENTE</span></p>
               <p><strong>TELF:</strong> <span id="ticket-telefono">TELF</span></p>
             </div>
@@ -1421,7 +1421,7 @@
     }
 
     // On Document Load
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", async () => {
       // Initialize Lucide Icons
       lucide.createIcons();
 
@@ -1429,7 +1429,7 @@
       seedLocalDataIfEmpty();
 
       // Load Ticket Config
-      loadTicketConfig();
+      await loadTicketConfig();
 
       // Load Data (caché local + intento de sincronización con AppSheet)
       fetchPreventas();
@@ -2547,7 +2547,7 @@
 
           canvas.innerHTML = `
             <div style="text-align: center; margin-bottom: 15px;">
-              <img src="Logoferre.png" alt="Logo" style="margin: 0 auto 10px auto; display: block; height: ${ticketCfg.logoSize || 50}px; max-height: ${ticketCfg.logoSize || 50}px; object-fit: contain;">
+              <img src="logoferre.png" alt="Logo" style="margin: 0 auto 10px auto; display: block; height: ${ticketCfg.logoSize || 50}px; max-height: ${ticketCfg.logoSize || 50}px; object-fit: contain;">
               <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.slogan}</p>
               <h4 style="font-size: 13px; font-weight: bold; margin: 0 0 2px 0;">${ticketCfg.company}</h4>
               <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.nit}</p>
@@ -2892,7 +2892,7 @@
       }
 
       // 2. Fill Ticket digital preview (right side)
-      document.getElementById('ticket-id').textContent = String(p.id).padStart(5, '0');
+      document.getElementById('ticket-id').textContent = String(p.id).replace('2026-01-M1P505-', '');
       document.getElementById('ticket-fecha').textContent = p.fecha;
       document.getElementById('ticket-cliente').textContent = p.cliente.toUpperCase();
       document.getElementById('ticket-telefono').textContent = p.telefono || 'SIN CONTACTO';
@@ -3000,7 +3000,7 @@
 
       canvas.innerHTML = `
         <div style="text-align: center; margin-bottom: 15px;">
-          <img src="Logoferre.png" alt="Logo" style="margin: 0 auto 10px auto; display: block; height: ${ticketCfg.logoSize || 50}px; max-height: ${ticketCfg.logoSize || 50}px; object-fit: contain;">
+          <img src="logoferre.png" alt="Logo" style="margin: 0 auto 10px auto; display: block; height: ${ticketCfg.logoSize || 50}px; max-height: ${ticketCfg.logoSize || 50}px; object-fit: contain;">
           <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.slogan}</p>
           <h4 style="font-size: 13px; font-weight: bold; margin: 0 0 2px 0;">${ticketCfg.company}</h4>
           <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.nit}</p>
@@ -3012,7 +3012,7 @@
 
         <div style="font-size: 11px; margin-bottom: 12px; line-height: 1.3;">
           <p style="margin: 2px 0;"><strong>FECHA:</strong> ${p.fecha}</p>
-          <p style="margin: 2px 0;"><strong>TICKET:</strong> #${String(p.id).padStart(5, '0')}</p>
+          <p style="margin: 2px 0;"><strong>TICKET:</strong> #${String(p.id).replace('2026-01-M1P505-', '')}</p>
           <p style="margin: 2px 0;"><strong>CLIENTE:</strong> ${p.cliente.toUpperCase()}</p>
           <p style="margin: 2px 0;"><strong>TELF:</strong> ${p.telefono || 'SIN CONTACTO'}</p>
         </div>
@@ -3194,14 +3194,30 @@
       }
     }
 
-    function loadTicketConfig() {
-      let config;
+    async function loadTicketConfig() {
+      let config = null;
       try {
-        const raw = localStorage.getItem('ticket_config');
-        config = raw ? JSON.parse(raw) : DEFAULT_TICKET_CONFIG;
-      } catch (e) {
-        config = DEFAULT_TICKET_CONFIG;
+        const response = await fetch('/api/ticket-config');
+        if (response.ok) {
+          const data = await response.json();
+          if (data) {
+            config = data;
+            localStorage.setItem('ticket_config', JSON.stringify(data));
+          }
+        }
+      } catch (err) {
+        console.warn("No se pudo cargar la configuración del ticket desde el servidor:", err.message);
       }
+
+      if (!config) {
+        try {
+          const raw = localStorage.getItem('ticket_config');
+          config = raw ? JSON.parse(raw) : DEFAULT_TICKET_CONFIG;
+        } catch (e) {
+          config = DEFAULT_TICKET_CONFIG;
+        }
+      }
+
       // Fill input fields in Sidebar
       document.getElementById('config-slogan').value = config.slogan || '';
       document.getElementById('config-company').value = config.company || '';
@@ -3220,7 +3236,7 @@
       applyTicketConfig(config);
     }
 
-    function saveAndApplyTicketConfig() {
+    async function saveAndApplyTicketConfig() {
       const config = {
         slogan: document.getElementById('config-slogan').value,
         company: document.getElementById('config-company').value,
@@ -3235,11 +3251,21 @@
       };
       localStorage.setItem('ticket_config', JSON.stringify(config));
       applyTicketConfig(config);
+
+      try {
+        await fetch('/api/ticket-config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(config)
+        });
+      } catch (err) {
+        console.warn("No se pudo guardar la configuración del ticket en el servidor:", err.message);
+      }
     }
 
-    function resetTicketConfigToDefault() {
+    async function resetTicketConfigToDefault() {
       localStorage.setItem('ticket_config', JSON.stringify(DEFAULT_TICKET_CONFIG));
-      loadTicketConfig();
+      await loadTicketConfig();
       showToast('Valores de plantilla restablecidos', 'info');
     }
 

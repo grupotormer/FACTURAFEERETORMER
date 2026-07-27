@@ -54,6 +54,11 @@ db.exec(`
     precio REAL NOT NULL DEFAULT 0.0,
     concat TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS TicketConfig (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
 `);
 
 // Insert some realistic dummy data if tables are empty
@@ -346,6 +351,33 @@ async function syncFromAppSheetToSQLite() {
 }
 
 // REST API Endpoints
+
+// GET /api/ticket-config - Get the custom ticket template configuration
+app.get('/api/ticket-config', (req, res) => {
+  try {
+    const row = db.prepare("SELECT value FROM TicketConfig WHERE key = 'ticket_config'").get();
+    if (row) {
+      res.json(JSON.parse(row.value));
+    } else {
+      res.json(null);
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al obtener la configuración del ticket: ' + err.message });
+  }
+});
+
+// POST /api/ticket-config - Save the custom ticket template configuration
+app.post('/api/ticket-config', (req, res) => {
+  try {
+    const config = req.body;
+    db.prepare("INSERT OR REPLACE INTO TicketConfig (key, value) VALUES ('ticket_config', ?)").run(JSON.stringify(config));
+    res.json({ success: true, config });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al guardar la configuración del ticket: ' + err.message });
+  }
+});
 
 // POST /api/clientes - Create a new client
 app.post('/api/clientes', async (req, res) => {

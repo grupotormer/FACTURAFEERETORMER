@@ -707,103 +707,109 @@ const DEFAULT_TICKET_CONFIG = {
 
 // Option to print ticket after processing
 function printTicket(transactionId, dateFormatted, preventaRow, detalleRows, clientPhone) {
-  const canvas = document.getElementById('print-ticket-area');
-  if (!canvas) return;
+  return new Promise((resolve) => {
+    const canvas = document.getElementById('print-ticket-area');
+    if (!canvas) {
+      resolve();
+      return;
+    }
 
-  // Read actual config from localStorage
-  let ticketCfg;
-  try {
-    const raw = localStorage.getItem('ticket_config');
-    ticketCfg = raw ? JSON.parse(raw) : DEFAULT_TICKET_CONFIG;
-  } catch (e) {
-    ticketCfg = DEFAULT_TICKET_CONFIG;
-  }
+    // Read actual config from localStorage
+    let ticketCfg;
+    try {
+      const raw = localStorage.getItem('ticket_config');
+      ticketCfg = raw ? JSON.parse(raw) : DEFAULT_TICKET_CONFIG;
+    } catch (e) {
+      ticketCfg = DEFAULT_TICKET_CONFIG;
+    }
 
-  // Build items list
-  let itemsHtml = '';
-  detalleRows.forEach(d => {
-    const material = d.ARTICULO;
-    const nameToDisplay = d.TextoBreve || material;
-    const qty = parseFloat(d.CANTIDAD) || 0;
-    const price = parseFloat(d.PRECIO) || 0;
-    const totalLine = parseFloat(d['TOTAL LINEA']) || (qty * price);
+    // Build items list
+    let itemsHtml = '';
+    detalleRows.forEach(d => {
+      const material = d.ARTICULO;
+      const nameToDisplay = d.TextoBreve || material;
+      const qty = parseFloat(d.CANTIDAD) || 0;
+      const price = parseFloat(d.PRECIO) || 0;
+      const totalLine = parseFloat(d['TOTAL LINEA']) || (qty * price);
 
-    itemsHtml += `
-      <div style="margin-bottom: 5px;">
-        <div style="display: flex; justify-content: space-between;">
-          <span style="font-weight: bold; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${nameToDisplay.toUpperCase()}</span>
-          <span>${totalLine.toFixed(2)} $</span>
+      itemsHtml += `
+        <div style="margin-bottom: 5px;">
+          <div style="display: flex; justify-content: space-between;">
+            <span style="font-weight: bold; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${nameToDisplay.toUpperCase()}</span>
+            <span>${totalLine.toFixed(2)} $</span>
+          </div>
+          <div style="font-size: 10px; color: #555; padding-left: 10px;">
+            ${Number(qty.toFixed(3))} UNID x ${price.toFixed(2)} $
+          </div>
         </div>
-        <div style="font-size: 10px; color: #555; padding-left: 10px;">
-          ${Number(qty.toFixed(3))} UNID x ${price.toFixed(2)} $
+      `;
+    });
+
+    // Offline QR Code Generation
+    let qrHtml = '';
+    if (window.qrcode) {
+      try {
+        const qr = qrcode(0, 'M');
+        qr.addData(`PREVENTA-${transactionId}`);
+        qr.make();
+        qrHtml = qr.createImgTag(3, 0);
+      } catch (e) {
+        console.error('Error generating QR code:', e.message);
+      }
+    }
+
+    canvas.innerHTML = `
+      <div style="text-align: center; margin-bottom: 15px;">
+        <img src="Logoferre.png" alt="Logo" style="margin: 0 auto 10px auto; display: block; height: 50px; max-height: 50px; object-fit: contain;">
+        <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.slogan}</p>
+        <h4 style="font-size: 13px; font-weight: bold; margin: 0 0 2px 0;">${ticketCfg.company}</h4>
+        <p style="font-size: 11px; color: #444; margin: 0 0 5px 0;">${ticketCfg.nit}</p>
+      </div>
+
+      <div style="font-size: 11px; margin-bottom: 12px; line-height: 1.3;">
+        <p style="margin: 2px 0;"><strong>FECHA:</strong> ${dateFormatted}</p>
+        <p style="margin: 2px 0;"><strong>TICKET:</strong> #${transactionId.replace('2026-01-M1P505-', '')}</p>
+        <p style="margin: 2px 0;"><strong>CLIENTE:</strong> ${preventaRow.NombreDelCliente.toUpperCase()}</p>
+        <p style="margin: 2px 0;"><strong>TELF:</strong> ${clientPhone || 'SIN CONTACTO'}</p>
+      </div>
+
+      <p style="letter-spacing: -1px; margin: 8px 0; color: #666; font-size: 12px;">------------------------------------</p>
+
+      <div style="font-size: 11px; margin-bottom: 10px;">
+        <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px;">
+          <span>CONCEPTO</span>
+          <span>TOTAL</span>
+        </div>
+        ${itemsHtml}
+      </div>
+
+      <p style="letter-spacing: -1px; margin: 8px 0; color: #666; font-size: 12px;">------------------------------------</p>
+
+      <div style="font-size: 11px; text-align: right; line-height: 1.4;">
+        <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 900; border-top: 1px dashed #333; padding-top: 6px;">
+          <span>TOTAL:</span>
+          <span>${parseFloat(preventaRow.total).toFixed(2)} $</span>
+        </div>
+      </div>
+
+      <p style="letter-spacing: -1px; margin: 15px 0 10px 0; color: #666; font-size: 12px;">------------------------------------</p>
+
+      <div style="text-align: center; font-size: 10px; line-height: 1.3;">
+        <p style="font-weight: bold; margin: 3px 0;">${ticketCfg.footer1}</p>
+        <p style="color: #666; font-size: 9px; margin: 0 0 12px 0;">${ticketCfg.footer2}</p>
+
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+          ${qrHtml}
+          <span style="font-size: 8px; color: #777; font-family: monospace;">*PREVENTA-${transactionId}*</span>
         </div>
       </div>
     `;
+
+    setTimeout(() => {
+      window.print();
+      resolve();
+    }, 150);
   });
-
-  // Offline QR Code Generation
-  let qrHtml = '';
-  if (window.qrcode) {
-    try {
-      const qr = qrcode(0, 'M');
-      qr.addData(`PREVENTA-${transactionId}`);
-      qr.make();
-      qrHtml = qr.createImgTag(3, 0);
-    } catch (e) {
-      console.error('Error generating QR code:', e.message);
-    }
-  }
-
-  canvas.innerHTML = `
-    <div style="text-align: center; margin-bottom: 15px;">
-      <img src="Logoferre.png" alt="Logo" style="margin: 0 auto 10px auto; display: block; height: 50px; max-height: 50px; object-fit: contain;">
-      <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.slogan}</p>
-      <h4 style="font-size: 13px; font-weight: bold; margin: 0 0 2px 0;">${ticketCfg.company}</h4>
-      <p style="font-size: 11px; color: #444; margin: 0 0 5px 0;">${ticketCfg.nit}</p>
-    </div>
-
-    <div style="font-size: 11px; margin-bottom: 12px; line-height: 1.3;">
-      <p style="margin: 2px 0;"><strong>FECHA:</strong> ${dateFormatted}</p>
-      <p style="margin: 2px 0;"><strong>TICKET:</strong> #${transactionId.replace('2026-01-M1P505-', '')}</p>
-      <p style="margin: 2px 0;"><strong>CLIENTE:</strong> ${preventaRow.NombreDelCliente.toUpperCase()}</p>
-      <p style="margin: 2px 0;"><strong>TELF:</strong> ${clientPhone || 'SIN CONTACTO'}</p>
-    </div>
-
-    <p style="letter-spacing: -1px; margin: 8px 0; color: #666; font-size: 12px;">------------------------------------</p>
-
-    <div style="font-size: 11px; margin-bottom: 10px;">
-      <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px;">
-        <span>CONCEPTO</span>
-        <span>TOTAL</span>
-      </div>
-      ${itemsHtml}
-    </div>
-
-    <p style="letter-spacing: -1px; margin: 8px 0; color: #666; font-size: 12px;">------------------------------------</p>
-
-    <div style="font-size: 11px; text-align: right; line-height: 1.4;">
-      <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 900; border-top: 1px dashed #333; padding-top: 6px;">
-        <span>TOTAL:</span>
-        <span>${parseFloat(preventaRow.total).toFixed(2)} $</span>
-      </div>
-    </div>
-
-    <p style="letter-spacing: -1px; margin: 15px 0 10px 0; color: #666; font-size: 12px;">------------------------------------</p>
-
-    <div style="text-align: center; font-size: 10px; line-height: 1.3;">
-      <p style="font-weight: bold; margin: 3px 0;">${ticketCfg.footer1}</p>
-      <p style="color: #666; font-size: 9px; margin: 0 0 12px 0;">${ticketCfg.footer2}</p>
-
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
-        ${qrHtml}
-        <span style="font-size: 8px; color: #777; font-family: monospace;">*PREVENTA-${transactionId}*</span>
-      </div>
-    </div>
-  `;
-
-  setTimeout(() => {
-    window.print();
-  }, 150);
 }
 
 // Submit Preventa to AppSheet via API v2
@@ -813,7 +819,8 @@ async function submitPreventa() {
     return;
   }
 
-  showLoading('Procesando Preventa', 'Enviando información del pedido a AppSheet...');
+  // Disable button immediately to prevent double submissions
+  btnSubmitPreventa.disabled = true;
 
   const transactionId = await generateTransactionId();
   const dateFormatted = formatAppSheetDate(new Date());
@@ -858,6 +865,13 @@ async function submitPreventa() {
     };
   });
 
+  // Print ticket first
+  const clientPhone = state.selectedClient.Telefono || 'SIN CONTACTO';
+  await printTicket(transactionId, dateFormatted, preventaRow, detalleRows, clientPhone);
+
+  // Now perform the AppSheet REST API registration/processing
+  showLoading('Procesando Preventa', 'Enviando información del pedido a AppSheet...');
+
   try {
     // 1. Add Preventa Header
     const preventaRes = await addTableRow('Preventa', [preventaRow]);
@@ -869,10 +883,6 @@ async function submitPreventa() {
     await editTableRow('Preventa', [{ IDTransacion: transactionId }]);
 
     showToast(`¡Preventa ${transactionId} procesada con éxito!`, 'success');
-
-    // Imprimir ticket de preventa
-    const clientPhone = state.selectedClient.Telefono || 'SIN CONTACTO';
-    printTicket(transactionId, dateFormatted, preventaRow, detalleRows, clientPhone);
 
     // Reset state & Clear cart
     state.cart = [];
@@ -886,6 +896,7 @@ async function submitPreventa() {
     console.error('Error submitting preventa:', error);
     showToast('Ocurrió un error al registrar la preventa en AppSheet. Inténtalo de nuevo.', 'error');
     hideLoading();
+    updateSubmitButtonState();
   }
 }
 

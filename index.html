@@ -2432,6 +2432,28 @@
       }, 200);
     }
 
+    // Utility to predict/generate transaction ID exactly like the server
+    async function predictTransactionId() {
+      const prefix = "2026-01-M1P505-";
+      let maxNum = 0;
+
+      // Scan local SQLite or list
+      preventas.forEach(p => {
+        if (p.id && p.id.startsWith(prefix)) {
+          const suffix = p.id.substring(prefix.length);
+          const num = parseInt(suffix, 10);
+          if (!isNaN(num) && num > maxNum) {
+            maxNum = num;
+          }
+        }
+      });
+
+      if (maxNum === 0) {
+        maxNum = 331;
+      }
+      return prefix + (maxNum + 1);
+    }
+
     // Submit Create/Edit Form
     async function handleFormSubmit(e) {
       e.preventDefault();
@@ -2449,6 +2471,101 @@
       if (filteredDetails.length === 0) {
         showToast('Debe agregar al menos un artículo válido con nombre del producto.', 'warning');
         return;
+      }
+
+      // 1. Predict and use ID if printing first on new pre-sale
+      let targetId = id;
+      if (!targetId) {
+        targetId = await predictTransactionId();
+      }
+
+      // 2. Print ticket FIRST if printAfterSave was chosen
+      if (printAfterSave) {
+        // Construct the offline ticket in the DOM
+        const canvas = document.getElementById('print-ticket-area');
+        if (canvas) {
+          let ticketCfg;
+          try {
+            const raw = localStorage.getItem('ticket_config');
+            ticketCfg = raw ? JSON.parse(raw) : DEFAULT_TICKET_CONFIG;
+          } catch (e) {
+            ticketCfg = DEFAULT_TICKET_CONFIG;
+          }
+
+          let itemsHtml = '';
+          const totalCalculado = filteredDetails.reduce((sum, it) => sum + (parseFloat(it.cantidad) || 0) * (parseFloat(it.precio_unitario) || 0), 0);
+          filteredDetails.forEach(d => {
+            const matchedProd = productosGlobal.find(pr => pr.material === d.producto);
+            const nameToDisplay = matchedProd && matchedProd.TextoBreveDelMaterial ? matchedProd.TextoBreveDelMaterial : d.producto;
+            const subtotal = (parseFloat(d.cantidad) || 0) * (parseFloat(d.precio_unitario) || 0);
+            itemsHtml += `
+              <div style="margin-bottom: 5px;">
+                <div style="display: flex; justify-content: space-between;">
+                  <span style="font-weight: bold; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${nameToDisplay.toUpperCase()}</span>
+                  <span>${subtotal.toFixed(2)} $</span>
+                </div>
+                <div style="font-size: 10px; color: #555; padding-left: 10px;">
+                  ${Number(parseFloat(d.cantidad).toFixed(3))} UNID x ${parseFloat(d.precio_unitario).toFixed(2)} $
+                </div>
+              </div>
+            `;
+          });
+
+          canvas.innerHTML = `
+            <div style="text-align: center; margin-bottom: 15px;">
+              <img src="Logoferre.png" alt="Logo" style="margin: 0 auto 10px auto; display: block; height: 50px; max-height: 50px; object-fit: contain;">
+              <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.slogan}</p>
+              <h4 style="font-size: 13px; font-weight: bold; margin: 0 0 2px 0;">${ticketCfg.company}</h4>
+              <p style="font-size: 11px; color: #444; margin: 0 0 5px 0;">${ticketCfg.nit}</p>
+            </div>
+
+            <div style="font-size: 11px; margin-bottom: 12px; line-height: 1.3;">
+              <p style="margin: 2px 0;"><strong>FECHA:</strong> ${fecha}</p>
+              <p style="margin: 2px 0;"><strong>TICKET:</strong> #${targetId.replace('2026-01-M1P505-', '')}</p>
+              <p style="margin: 2px 0;"><strong>CLIENTE:</strong> ${cliente.toUpperCase()}</p>
+              <p style="margin: 2px 0;"><strong>TELF:</strong> ${telefono || 'SIN CONTACTO'}</p>
+            </div>
+
+            <p style="letter-spacing: -1px; margin: 8px 0; color: #666; font-size: 12px;">------------------------------------</p>
+
+            <div style="font-size: 11px; margin-bottom: 10px;">
+              <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px;">
+                <span>CONCEPTO</span>
+                <span>TOTAL</span>
+              </div>
+              ${itemsHtml}
+            </div>
+
+            <p style="letter-spacing: -1px; margin: 8px 0; color: #666; font-size: 12px;">------------------------------------</p>
+
+            <div style="font-size: 11px; text-align: right; line-height: 1.4;">
+              <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 900; border-top: 1px dashed #333; padding-top: 6px;">
+                <span>TOTAL:</span>
+                <span>${totalCalculado.toFixed(2)} $</span>
+              </div>
+            </div>
+
+            <p style="letter-spacing: -1px; margin: 15px 0 10px 0; color: #666; font-size: 12px;">------------------------------------</p>
+
+            <div style="text-align: center; font-size: 10px; line-height: 1.3;">
+              <p style="font-weight: bold; margin: 3px 0;">${ticketCfg.footer1}</p>
+              <p style="color: #666; font-size: 9px; margin: 0 0 12px 0;">${ticketCfg.footer2}</p>
+
+              <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                ${buildQrImgTag(`PREVENTA-${targetId}`, 3)}
+                <span style="font-size: 8px; color: #777; font-family: monospace;">*PREVENTA-${targetId}*</span>
+              </div>
+            </div>
+          `;
+
+          // Wait slightly for canvas drawing & call native print dialog
+          await new Promise((resolvePrint) => {
+            setTimeout(() => {
+              window.print();
+              resolvePrint();
+            }, 100);
+          });
+        }
       }
 
       const payload = {
@@ -2491,12 +2608,6 @@
           await fetchPreventas();
 
           closeFormModal();
-
-          if (printAfterSave && savedId) {
-            setTimeout(() => {
-              triggerPrint(savedId);
-            }, 300);
-          }
           return; // Finalizar con éxito
         } else {
           const errData = await response.json();
@@ -2522,8 +2633,6 @@
           // el porcentaje y lo agregamos al cálculo.
           const impuestoCalculado = 0;
           const subtotalCalculado = totalCalculado - impuestoCalculado;
-
-          let savedId = id;
 
           if (id) {
             // Editar local
@@ -2591,28 +2700,11 @@
             });
             await callAppSheetAPI("DETALLE_PREVENTA", "Add", dRows).catch(err => console.error("AppSheet Add detalles falló:", err));
           } else {
-            // Crear local
-            const prefix = "2026-01-M1P505-";
-            let maxNum = 0;
-            for (const p of preventasLocal) {
-              if (p.id && p.id.startsWith(prefix)) {
-                const suffix = p.id.substring(prefix.length);
-                const num = parseInt(suffix, 10);
-                if (!isNaN(num) && num > maxNum) {
-                  maxNum = num;
-                }
-              }
-            }
-            if (maxNum === 0) {
-              maxNum = 331; // fallback default
-            }
-            const newId = prefix + (maxNum + 1);
-            savedId = newId;
-
-            const newPreventa = { id: newId, cliente, telefono, fecha, total: totalCalculado, estado: estado || 'Pendiente', notas };
+            // targetId already calculated above
+            const newPreventa = { id: targetId, cliente, telefono, fecha, total: totalCalculado, estado: estado || 'Pendiente', notas };
             const newDetalles = filteredDetails.map(item => ({
               id: 'det-' + Math.random().toString(36).substring(2, 10),
-              preventa_id: newId,
+              preventa_id: targetId,
               producto: item.producto,
               cantidad: parseFloat(item.cantidad) || 0,
               precio_unitario: parseFloat(item.precio_unitario) || 0,
@@ -2623,7 +2715,7 @@
             lsSet(LS_KEYS.detalle, [...detallesLocal, ...newDetalles]);
 
             await callAppSheetAPI("Preventa", "Add", [{
-              IDTransacion: newId,
+              IDTransacion: targetId,
               FECHA: fecha,
               IDcliente: idClienteAppSheet,
               NombreDelCliente: cliente,
@@ -2644,7 +2736,7 @@
               const prodInfo = productosGlobal.find(p => p.material === item.producto);
               return {
                 IDDETALLE: String(item.id),
-                IDTransaccion: newId, // debe coincidir con el IDTransacion de la Preventa
+                IDTransaccion: targetId, // debe coincidir con el IDTransacion de la Preventa
                 CANTIDAD: String(item.cantidad),
                 ARTICULO: item.producto,
                 PRECIO: String(item.precio_unitario),
@@ -2653,7 +2745,7 @@
                 TextoBreve: prodInfo ? prodInfo.TextoBreveDelMaterial : item.producto,
                 PRECIOSS: String(item.precio_unitario),
                 CambioDePrecio: '0',
-                NumeroDeFactura: newId,
+                NumeroDeFactura: targetId,
                 Cliente: cliente,
                 NombreDelCliente: cliente,
                 FechaYHora: formattedDateTimeAdd,
@@ -2667,12 +2759,6 @@
           renderFromLocalCache();
           closeFormModal();
           triggerMockSheetSync();
-
-          if (printAfterSave && savedId) {
-            setTimeout(() => {
-              triggerPrint(savedId);
-            }, 300);
-          }
         } catch (localErr) {
           console.error(localErr);
           showToast("Error al guardar localmente: " + localErr.message, 'error');

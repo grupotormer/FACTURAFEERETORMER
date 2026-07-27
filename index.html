@@ -412,6 +412,22 @@
                 <input type="text" id="config-nit" oninput="saveAndApplyTicketConfig()" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all">
               </div>
               <div>
+                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">NRC</label>
+                <input type="text" id="config-nrc" oninput="saveAndApplyTicketConfig()" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Actividad económica</label>
+                <input type="text" id="config-actividad" oninput="saveAndApplyTicketConfig()" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Teléfono</label>
+                <input type="text" id="config-telefono" oninput="saveAndApplyTicketConfig()" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Correo</label>
+                <input type="text" id="config-correo" oninput="saveAndApplyTicketConfig()" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all">
+              </div>
+              <div>
                 <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Pie de Página (Línea 1)</label>
                 <input type="text" id="config-footer1" oninput="saveAndApplyTicketConfig()" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all">
               </div>
@@ -455,6 +471,10 @@
                 <p id="preview-tab-slogan" class="text-[10px] text-slate-700">Calidad y Confianza en productos</p>
                 <h4 id="preview-tab-company" class="font-bold text-xs tracking-wide">Juan Carlo Torres Garcia</h4>
                 <p id="preview-tab-nit" class="text-[10px] text-slate-700">NIT: 0507-271277-101-0</p>
+                <p id="preview-tab-nrc" class="text-[10px] text-slate-700"></p>
+                <p id="preview-tab-actividad" class="text-[10px] text-slate-700"></p>
+                <p id="preview-tab-telefono-empresa" class="text-[10px] text-slate-700"></p>
+                <p id="preview-tab-correo" class="text-[10px] text-slate-700"></p>
               </div>
 
               <div class="space-y-1 text-[10px] mb-3">
@@ -754,6 +774,10 @@
               <p id="form-ticket-slogan" class="text-[10px] text-slate-700">Calidad y confianza en nuestros productos</p>
               <h4 id="form-ticket-company" class="font-bold text-xs tracking-wide">Juan Carlos Torres García</h4>
               <p id="form-ticket-nit" class="text-[10px] text-slate-700">NIT: 0507-271277-101-0</p>
+              <p id="form-ticket-nrc" class="text-[10px] text-slate-700"></p>
+              <p id="form-ticket-actividad" class="text-[10px] text-slate-700"></p>
+              <p id="form-ticket-telefono-empresa" class="text-[10px] text-slate-700"></p>
+              <p id="form-ticket-correo" class="text-[10px] text-slate-700"></p>
             </div>
 
             <div class="space-y-1 text-[10px] mb-3">
@@ -933,6 +957,10 @@
               <p id="view-ticket-slogan" class="text-[10px] text-slate-700">Calidad y confianza en nuestros productos</p>
               <h4 id="view-ticket-company" class="font-bold text-xs tracking-wide">Juan Carlos Torres García</h4>
               <p id="view-ticket-nit" class="text-[10px] text-slate-700">NIT: 0507-271277-101-0</p>
+              <p id="view-ticket-nrc" class="text-[10px] text-slate-700"></p>
+              <p id="view-ticket-actividad" class="text-[10px] text-slate-700"></p>
+              <p id="view-ticket-telefono-empresa" class="text-[10px] text-slate-700"></p>
+              <p id="view-ticket-correo" class="text-[10px] text-slate-700"></p>
             </div>
 
             <div class="space-y-1 text-[10px] mb-3">
@@ -2522,7 +2550,11 @@
               <img src="Logoferre.png" alt="Logo" style="margin: 0 auto 10px auto; display: block; height: ${ticketCfg.logoSize || 50}px; max-height: ${ticketCfg.logoSize || 50}px; object-fit: contain;">
               <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.slogan}</p>
               <h4 style="font-size: 13px; font-weight: bold; margin: 0 0 2px 0;">${ticketCfg.company}</h4>
-              <p style="font-size: 11px; color: #444; margin: 0 0 5px 0;">${ticketCfg.nit}</p>
+              <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.nit}</p>
+              <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.nrc || ''}</p>
+              <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.actividad || ''}</p>
+              <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.telefono || ''}</p>
+              <p style="font-size: 11px; color: #444; margin: 0 0 5px 0;">${ticketCfg.correo || ''}</p>
             </div>
 
             <div style="font-size: 11px; margin-bottom: 12px; line-height: 1.3;">
@@ -2971,7 +3003,11 @@
           <img src="Logoferre.png" alt="Logo" style="margin: 0 auto 10px auto; display: block; height: ${ticketCfg.logoSize || 50}px; max-height: ${ticketCfg.logoSize || 50}px; object-fit: contain;">
           <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.slogan}</p>
           <h4 style="font-size: 13px; font-weight: bold; margin: 0 0 2px 0;">${ticketCfg.company}</h4>
-          <p style="font-size: 11px; color: #444; margin: 0 0 5px 0;">${ticketCfg.nit}</p>
+          <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.nit}</p>
+          <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.nrc || ''}</p>
+          <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.actividad || ''}</p>
+          <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.telefono || ''}</p>
+          <p style="font-size: 11px; color: #444; margin: 0 0 5px 0;">${ticketCfg.correo || ''}</p>
         </div>
 
         <div style="font-size: 11px; margin-bottom: 12px; line-height: 1.3;">
@@ -3142,6 +3178,10 @@
       slogan: "Calidad y confianza en nuestros productos",
       company: "Juan Carlos Torres García",
       nit: "NIT: 0507-271277-101-0",
+      nrc: "NRC: 123456-7",
+      actividad: "Actividad económica: Venta de artículos de ferretería",
+      telefono: "Teléfono: +34 123 456 789",
+      correo: "Correo: contacto@tormersystems.com",
       footer1: "¡GRACIAS POR SU PREFERENCIA!",
       footer2: "Este documento no tiene validez fiscal",
       logoSize: 50
@@ -3166,6 +3206,10 @@
       document.getElementById('config-slogan').value = config.slogan || '';
       document.getElementById('config-company').value = config.company || '';
       document.getElementById('config-nit').value = config.nit || '';
+      document.getElementById('config-nrc').value = config.nrc || '';
+      document.getElementById('config-actividad').value = config.actividad || '';
+      document.getElementById('config-telefono').value = config.telefono || '';
+      document.getElementById('config-correo').value = config.correo || '';
       document.getElementById('config-footer1').value = config.footer1 || '';
       document.getElementById('config-footer2').value = config.footer2 || '';
 
@@ -3181,6 +3225,10 @@
         slogan: document.getElementById('config-slogan').value,
         company: document.getElementById('config-company').value,
         nit: document.getElementById('config-nit').value,
+        nrc: document.getElementById('config-nrc').value,
+        actividad: document.getElementById('config-actividad').value,
+        telefono: document.getElementById('config-telefono').value,
+        correo: document.getElementById('config-correo').value,
         footer1: document.getElementById('config-footer1').value,
         footer2: document.getElementById('config-footer2').value,
         logoSize: parseInt(document.getElementById('config-logosize').value, 10) || 50
@@ -3300,6 +3348,14 @@
       if (formCompany) formCompany.textContent = c.company;
       const formNit = document.getElementById('form-ticket-nit');
       if (formNit) formNit.textContent = c.nit;
+      const formNrc = document.getElementById('form-ticket-nrc');
+      if (formNrc) formNrc.textContent = c.nrc || '';
+      const formActividad = document.getElementById('form-ticket-actividad');
+      if (formActividad) formActividad.textContent = c.actividad || '';
+      const formTelEmpresa = document.getElementById('form-ticket-telefono-empresa');
+      if (formTelEmpresa) formTelEmpresa.textContent = c.telefono || '';
+      const formCorreo = document.getElementById('form-ticket-correo');
+      if (formCorreo) formCorreo.textContent = c.correo || '';
       const formFooter1 = document.getElementById('form-ticket-footer1');
       if (formFooter1) formFooter1.textContent = c.footer1;
       const formFooter2 = document.getElementById('form-ticket-footer2');
@@ -3312,6 +3368,14 @@
       if (viewCompany) viewCompany.textContent = c.company;
       const viewNit = document.getElementById('view-ticket-nit');
       if (viewNit) viewNit.textContent = c.nit;
+      const viewNrc = document.getElementById('view-ticket-nrc');
+      if (viewNrc) viewNrc.textContent = c.nrc || '';
+      const viewActividad = document.getElementById('view-ticket-actividad');
+      if (viewActividad) viewActividad.textContent = c.actividad || '';
+      const viewTelEmpresa = document.getElementById('view-ticket-telefono-empresa');
+      if (viewTelEmpresa) viewTelEmpresa.textContent = c.telefono || '';
+      const viewCorreo = document.getElementById('view-ticket-correo');
+      if (viewCorreo) viewCorreo.textContent = c.correo || '';
       const viewFooter1 = document.getElementById('view-ticket-footer1');
       if (viewFooter1) viewFooter1.textContent = c.footer1;
       const viewFooter2 = document.getElementById('view-ticket-footer2');
@@ -3324,6 +3388,14 @@
       if (tabCompany) tabCompany.textContent = c.company;
       const tabNit = document.getElementById('preview-tab-nit');
       if (tabNit) tabNit.textContent = c.nit;
+      const tabNrc = document.getElementById('preview-tab-nrc');
+      if (tabNrc) tabNrc.textContent = c.nrc || '';
+      const tabActividad = document.getElementById('preview-tab-actividad');
+      if (tabActividad) tabActividad.textContent = c.actividad || '';
+      const tabTelEmpresa = document.getElementById('preview-tab-telefono-empresa');
+      if (tabTelEmpresa) tabTelEmpresa.textContent = c.telefono || '';
+      const tabCorreo = document.getElementById('preview-tab-correo');
+      if (tabCorreo) tabCorreo.textContent = c.correo || '';
       const tabFooter1 = document.getElementById('preview-tab-footer1');
       if (tabFooter1) tabFooter1.textContent = c.footer1;
       const tabFooter2 = document.getElementById('preview-tab-footer2');

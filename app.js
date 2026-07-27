@@ -701,6 +701,10 @@ const DEFAULT_TICKET_CONFIG = {
   slogan: "Calidad y confianza en nuestros productos",
   company: "Juan Carlos Torres García",
   nit: "NIT: 0507-271277-101-0",
+  nrc: "NRC: 123456-7",
+  actividad: "Actividad económica: Venta de artículos de ferretería",
+  telefono: "Teléfono: +34 123 456 789",
+  correo: "Correo: contacto@tormersystems.com",
   footer1: "¡GRACIAS POR SU PREFERENCIA!",
   footer2: "Este documento no tiene validez fiscal",
   logoSize: 50
@@ -764,7 +768,11 @@ function printTicket(transactionId, dateFormatted, preventaRow, detalleRows, cli
         <img src="Logoferre.png" alt="Logo" style="margin: 0 auto 10px auto; display: block; height: ${ticketCfg.logoSize || 50}px; max-height: ${ticketCfg.logoSize || 50}px; object-fit: contain;">
         <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.slogan}</p>
         <h4 style="font-size: 13px; font-weight: bold; margin: 0 0 2px 0;">${ticketCfg.company}</h4>
-        <p style="font-size: 11px; color: #444; margin: 0 0 5px 0;">${ticketCfg.nit}</p>
+        <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.nit}</p>
+        <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.nrc || ''}</p>
+        <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.actividad || ''}</p>
+        <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.telefono || ''}</p>
+        <p style="font-size: 11px; color: #444; margin: 0 0 5px 0;">${ticketCfg.correo || ''}</p>
       </div>
 
       <div style="font-size: 11px; margin-bottom: 12px; line-height: 1.3;">

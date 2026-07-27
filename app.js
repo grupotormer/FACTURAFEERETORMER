@@ -702,7 +702,8 @@ const DEFAULT_TICKET_CONFIG = {
   company: "Juan Carlos Torres García",
   nit: "NIT: 0507-271277-101-0",
   footer1: "¡GRACIAS POR SU PREFERENCIA!",
-  footer2: "Este documento no tiene validez fiscal"
+  footer2: "Este documento no tiene validez fiscal",
+  logoSize: 50
 };
 
 // Option to print ticket after processing
@@ -760,7 +761,7 @@ function printTicket(transactionId, dateFormatted, preventaRow, detalleRows, cli
 
     canvas.innerHTML = `
       <div style="text-align: center; margin-bottom: 15px;">
-        <img src="Logoferre.png" alt="Logo" style="margin: 0 auto 10px auto; display: block; height: 50px; max-height: 50px; object-fit: contain;">
+        <img src="Logoferre.png" alt="Logo" style="margin: 0 auto 10px auto; display: block; height: ${ticketCfg.logoSize || 50}px; max-height: ${ticketCfg.logoSize || 50}px; object-fit: contain;">
         <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.slogan}</p>
         <h4 style="font-size: 13px; font-weight: bold; margin: 0 0 2px 0;">${ticketCfg.company}</h4>
         <p style="font-size: 11px; color: #444; margin: 0 0 5px 0;">${ticketCfg.nit}</p>

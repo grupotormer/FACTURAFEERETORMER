@@ -419,6 +419,15 @@
                 <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Pie de Página (Línea 2)</label>
                 <input type="text" id="config-footer2" oninput="saveAndApplyTicketConfig()" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all">
               </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex justify-between items-center">
+                  <span>Tamaño de Logo (Altura)</span>
+                  <span id="logo-size-display" class="text-emerald-400 font-mono text-sm font-black">50 px</span>
+                </label>
+                <div class="flex items-center gap-4">
+                  <input type="range" id="config-logosize" min="30" max="150" value="50" oninput="updateLogoSizeValue(this.value); saveAndApplyTicketConfig();" class="flex-1 h-2 bg-slate-900 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+                </div>
+              </div>
 
               <div class="pt-4 border-t border-slate-700 flex gap-3">
                 <button onclick="resetTicketConfigToDefault()" class="flex-1 py-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5">
@@ -442,7 +451,7 @@
             <!-- Pre-populated preview card mimicking real ticket -->
             <div class="bg-white text-slate-900 p-6 rounded shadow-inner w-full max-w-[280px] font-mono text-xs border border-slate-300 leading-tight select-none pointer-events-none">
               <div class="text-center space-y-1 mb-4">
-                <img src="Logoferre.png" alt="Logo" class="mx-auto h-[50px] w-auto object-contain mb-4">
+                <img src="Logoferre.png" alt="Logo" id="preview-tab-logo" class="mx-auto w-auto object-contain mb-4" style="height: 50px;">
                 <p id="preview-tab-slogan" class="text-[10px] text-slate-700">Calidad y Confianza en productos</p>
                 <h4 id="preview-tab-company" class="font-bold text-xs tracking-wide">Juan Carlo Torres Garcia</h4>
                 <p id="preview-tab-nit" class="text-[10px] text-slate-700">NIT: 0507-271277-101-0</p>
@@ -741,7 +750,7 @@
           <!-- Digital receipt container -->
           <div class="bg-white text-slate-900 p-5 rounded shadow-inner w-full max-w-[280px] font-mono text-xs border border-slate-300 leading-tight select-none pointer-events-none" id="form-digital-receipt">
             <div class="text-center space-y-1 mb-4">
-              <img src="Logoferre.png" alt="Logo" class="mx-auto h-[50px] w-auto object-contain mb-4">
+              <img src="Logoferre.png" alt="Logo" id="form-ticket-logo" class="mx-auto w-auto object-contain mb-4" style="height: 50px;">
               <p id="form-ticket-slogan" class="text-[10px] text-slate-700">Calidad y confianza en nuestros productos</p>
               <h4 id="form-ticket-company" class="font-bold text-xs tracking-wide">Juan Carlos Torres García</h4>
               <p id="form-ticket-nit" class="text-[10px] text-slate-700">NIT: 0507-271277-101-0</p>
@@ -920,7 +929,7 @@
           <!-- The Ticket Preview Container (mimicking a physical receipt) -->
           <div class="bg-white text-slate-900 p-5 rounded shadow-inner w-full max-w-[280px] font-mono text-xs border border-slate-300 leading-tight select-none pointer-events-none" id="digital-receipt">
             <div class="text-center space-y-1 mb-4">
-              <img src="Logoferre.png" alt="Logo" class="mx-auto h-[50px] w-auto object-contain mb-4">
+              <img src="Logoferre.png" alt="Logo" id="view-ticket-logo" class="mx-auto w-auto object-contain mb-4" style="height: 50px;">
               <p id="view-ticket-slogan" class="text-[10px] text-slate-700">Calidad y confianza en nuestros productos</p>
               <h4 id="view-ticket-company" class="font-bold text-xs tracking-wide">Juan Carlos Torres García</h4>
               <p id="view-ticket-nit" class="text-[10px] text-slate-700">NIT: 0507-271277-101-0</p>
@@ -2510,7 +2519,7 @@
 
           canvas.innerHTML = `
             <div style="text-align: center; margin-bottom: 15px;">
-              <img src="Logoferre.png" alt="Logo" style="margin: 0 auto 10px auto; display: block; height: 50px; max-height: 50px; object-fit: contain;">
+              <img src="Logoferre.png" alt="Logo" style="margin: 0 auto 10px auto; display: block; height: ${ticketCfg.logoSize || 50}px; max-height: ${ticketCfg.logoSize || 50}px; object-fit: contain;">
               <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.slogan}</p>
               <h4 style="font-size: 13px; font-weight: bold; margin: 0 0 2px 0;">${ticketCfg.company}</h4>
               <p style="font-size: 11px; color: #444; margin: 0 0 5px 0;">${ticketCfg.nit}</p>
@@ -2959,7 +2968,7 @@
 
       canvas.innerHTML = `
         <div style="text-align: center; margin-bottom: 15px;">
-          <img src="Logoferre.png" alt="Logo" style="margin: 0 auto 10px auto; display: block; height: 50px; max-height: 50px; object-fit: contain;">
+          <img src="Logoferre.png" alt="Logo" style="margin: 0 auto 10px auto; display: block; height: ${ticketCfg.logoSize || 50}px; max-height: ${ticketCfg.logoSize || 50}px; object-fit: contain;">
           <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.slogan}</p>
           <h4 style="font-size: 13px; font-weight: bold; margin: 0 0 2px 0;">${ticketCfg.company}</h4>
           <p style="font-size: 11px; color: #444; margin: 0 0 5px 0;">${ticketCfg.nit}</p>
@@ -3134,8 +3143,16 @@
       company: "Juan Carlos Torres García",
       nit: "NIT: 0507-271277-101-0",
       footer1: "¡GRACIAS POR SU PREFERENCIA!",
-      footer2: "Este documento no tiene validez fiscal"
+      footer2: "Este documento no tiene validez fiscal",
+      logoSize: 50
     };
+
+    function updateLogoSizeValue(val) {
+      const display = document.getElementById('logo-size-display');
+      if (display) {
+        display.textContent = `${val} px`;
+      }
+    }
 
     function loadTicketConfig() {
       let config;
@@ -3152,6 +3169,10 @@
       document.getElementById('config-footer1').value = config.footer1 || '';
       document.getElementById('config-footer2').value = config.footer2 || '';
 
+      const size = config.logoSize || 50;
+      document.getElementById('config-logosize').value = size;
+      updateLogoSizeValue(size);
+
       applyTicketConfig(config);
     }
 
@@ -3161,7 +3182,8 @@
         company: document.getElementById('config-company').value,
         nit: document.getElementById('config-nit').value,
         footer1: document.getElementById('config-footer1').value,
-        footer2: document.getElementById('config-footer2').value
+        footer2: document.getElementById('config-footer2').value,
+        logoSize: parseInt(document.getElementById('config-logosize').value, 10) || 50
       };
       localStorage.setItem('ticket_config', JSON.stringify(config));
       applyTicketConfig(config);
@@ -3262,6 +3284,14 @@
 
     function applyTicketConfig(config) {
       const c = config || DEFAULT_TICKET_CONFIG;
+
+      // Update logo sizes in previews
+      const formLogo = document.getElementById('form-ticket-logo');
+      if (formLogo) formLogo.style.height = `${c.logoSize || 50}px`;
+      const viewLogo = document.getElementById('view-ticket-logo');
+      if (viewLogo) viewLogo.style.height = `${c.logoSize || 50}px`;
+      const tabLogo = document.getElementById('preview-tab-logo');
+      if (tabLogo) tabLogo.style.height = `${c.logoSize || 50}px`;
 
       // Update form ticket preview
       const formSlogan = document.getElementById('form-ticket-slogan');

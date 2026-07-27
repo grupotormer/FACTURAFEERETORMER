@@ -1863,7 +1863,7 @@
     // Fetch all preventas (intenta sincronizar con AppSheet, luego pinta desde caché local)
     async function fetchPreventas() {
       try {
-        const response = await fetch('/api/preventas');
+        const response = await fetch('/api/preventas?sync=true');
         if (response.ok) {
           const data = await response.json();
           // Update localStorage cache to match
@@ -1904,15 +1904,12 @@
         console.warn("No se pudo obtener preventas del backend, usando caché local:", err.message);
       }
 
-      // IMPORTANTE: ya NO se llama automáticamente a syncFromAppSheetToLocal()
-      // aquí. Antes, cada vez que se recargaba la página (algo constante en
-      // GitHub Pages, donde /api/preventas siempre falla), se intentaba jalar
-      // datos "frescos" de AppSheet y se sobreescribía la caché local. Si esa
-      // sincronización venía incompleta o con nombres de columna distintos a
-      // los que espera este código, terminaba BORRANDO los productos que sí
-      // se habían guardado correctamente en el navegador un momento antes.
-      // Ahora la caché local (localStorage) es la fuente de la verdad, y
-      // AppSheet solo se consulta cuando el usuario presiona "Sincronizar".
+      // Sincronización automática de todas las PREVENTAS al recargar la página (fallback local)
+      try {
+        await syncFromAppSheetToLocal();
+      } catch (e) {
+        console.warn("No se pudo sincronizar automáticamente con AppSheet en el frontend:", e.message);
+      }
       renderFromLocalCache();
     }
 

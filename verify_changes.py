@@ -33,6 +33,22 @@ def run_verification(page):
         }
       ]
       route.fulfill(status=200, content_type="application/json", body=json.dumps(mock_data))
+    elif "DATOS" in url or "EMPRESA" in url or "Empresa" in url or "empresa" in url:
+      mock_data = [
+        {
+          "NIT / ID EMPRESA": "NIT: 0507-271277-101-0",
+          "NOMBRES  DE EMPRESA": "Juan Carlos Torres Garcia",
+          "NRC": "NRC: 337461-3",
+          "ACTIVIDAD ECONOMICA": "ACTIVIDAD ECONÓMICA: VENTA AL POR MENOR DE ARTICULOS DE FERRETERIA",
+          "TELEFONO": "TEL: +503 7119 0621",
+          "CORREO": "EMAIL: info@gtormer.com",
+          "SLOGAN": "Calidad y confianza en nuestros productos",
+          "TAMAÑO DEL LOGOTIPO": "150",
+          "PIE DE PAGINA LINEA 1": "¡GRACIAS POR SU PREFERENCIA!",
+          "PIE DE PAGINA LINEA 2": "Este documento no tiene validez fiscal                                          Generado con software de Tormer Technologies."
+        }
+      ]
+      route.fulfill(status=200, content_type="application/json", body=json.dumps(mock_data))
     else:
       # Default mock success response for other AppSheet endpoints like Preventa and DETALLE_PREVENTA
       route.fulfill(status=200, content_type="application/json", body=json.dumps({"status": "success"}))

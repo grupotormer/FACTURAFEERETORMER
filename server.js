@@ -353,7 +353,30 @@ async function syncFromAppSheetToSQLite() {
 // REST API Endpoints
 
 // GET /api/ticket-config - Get the custom ticket template configuration
-app.get('/api/ticket-config', (req, res) => {
+app.get('/api/ticket-config', async (req, res) => {
+  try {
+    const companyFromAppSheet = await callAppSheetAPI("DATOS EMPRESA", "Find");
+    if (Array.isArray(companyFromAppSheet) && companyFromAppSheet.length > 0) {
+      const row = companyFromAppSheet[0];
+      const config = {
+        slogan: row["SLOGAN"] || '',
+        company: row["NOMBRES  DE EMPRESA"] || row["NOMBRES DE EMPRESA"] || '',
+        nit: row["NIT / ID EMPRESA"] || '',
+        nrc: row["NRC"] || '',
+        actividad: row["ACTIVIDAD ECONOMICA"] || row["ACTIVIDAD ECONÓMICA"] || '',
+        telefono: row["TELEFONO"] || '',
+        correo: row["CORREO"] || '',
+        footer1: row["PIE DE PAGINA LINEA 1"] || '',
+        footer2: row["PIE DE PAGINA LINEA 2"] || '',
+        logoSize: parseInt(row["TAMAÑO DEL LOGOTIPO"] || row["TAMAÑO DE LOGOTIPO"], 10) || 50
+      };
+      db.prepare("INSERT OR REPLACE INTO TicketConfig (key, value) VALUES ('ticket_config', ?)").run(JSON.stringify(config));
+      return res.json(config);
+    }
+  } catch (asErr) {
+    console.warn("No se pudo obtener la configuración del ticket desde AppSheet, usando local SQLite:", asErr.message);
+  }
+
   try {
     const row = db.prepare("SELECT value FROM TicketConfig WHERE key = 'ticket_config'").get();
     if (row) {
@@ -368,10 +391,29 @@ app.get('/api/ticket-config', (req, res) => {
 });
 
 // POST /api/ticket-config - Save the custom ticket template configuration
-app.post('/api/ticket-config', (req, res) => {
+app.post('/api/ticket-config', async (req, res) => {
   try {
     const config = req.body;
     db.prepare("INSERT OR REPLACE INTO TicketConfig (key, value) VALUES ('ticket_config', ?)").run(JSON.stringify(config));
+
+    const rowToEdit = {
+      _RowNumber: "2",
+      "SLOGAN": config.slogan || "",
+      "NOMBRES  DE EMPRESA": config.company || "",
+      "NIT / ID EMPRESA": config.nit || "",
+      "NRC": config.nrc || "",
+      "ACTIVIDAD ECONOMICA": config.actividad || "",
+      "TELEFONO": config.telefono || "",
+      "CORREO": config.correo || "",
+      "PIE DE PAGINA LINEA 1": config.footer1 || "",
+      "PIE DE PAGINA LINEA 2": config.footer2 || "",
+      "TAMAÑO DEL LOGOTIPO": String(config.logoSize || 50)
+    };
+
+    await callAppSheetAPI("DATOS EMPRESA", "Edit", [rowToEdit]).catch(err => {
+      console.error("AppSheet API DATOS EMPRESA Edit failed:", err.message);
+    });
+
     res.json({ success: true, config });
   } catch (err) {
     console.error(err);

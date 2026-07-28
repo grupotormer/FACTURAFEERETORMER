@@ -196,11 +196,30 @@ async function fetchInitialData() {
     const clientsPromise = fetchTableData('CLIENTES');
     // 2. Fetch stock
     const productsPromise = fetchTableData('stock');
+    // 3. Fetch DATOS EMPRESA
+    const companyPromise = fetchTableData('DATOS EMPRESA');
 
-    const [clientsRes, productsRes] = await Promise.all([clientsPromise, productsPromise]);
+    const [clientsRes, productsRes, companyRes] = await Promise.all([clientsPromise, productsPromise, companyPromise]);
 
     state.clients = clientsRes || [];
     state.products = productsRes || [];
+
+    if (Array.isArray(companyRes) && companyRes.length > 0) {
+      const row = companyRes[0];
+      const config = {
+        slogan: row["SLOGAN"] || '',
+        company: row["NOMBRES  DE EMPRESA"] || row["NOMBRES DE EMPRESA"] || '',
+        nit: row["NIT / ID EMPRESA"] || '',
+        nrc: row["NRC"] || '',
+        actividad: row["ACTIVIDAD ECONOMICA"] || row["ACTIVIDAD ECONÓMICA"] || '',
+        telefono: row["TELEFONO"] || '',
+        correo: row["CORREO"] || '',
+        footer1: row["PIE DE PAGINA LINEA 1"] || '',
+        footer2: row["PIE DE PAGINA LINEA 2"] || '',
+        logoSize: parseInt(row["TAMAÑO DEL LOGOTIPO"] || row["TAMAÑO DE LOGOTIPO"], 10) || 50
+      };
+      localStorage.setItem('ticket_config', JSON.stringify(config));
+    }
 
     // Populate Categories selector
     populateCategories();

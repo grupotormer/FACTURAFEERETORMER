@@ -1328,12 +1328,33 @@
 
     // Trae datos frescos de AppSheet y sobreescribe la caché local.
     async function syncFromAppSheetToLocal() {
-      const [preventasAS, detallesAS, clientesAS, stockAS] = await Promise.all([
+      const [preventasAS, detallesAS, clientesAS, stockAS, datosEmpresaAS] = await Promise.all([
         callAppSheetAPI("Preventa", "Find"),
         callAppSheetAPI("DETALLE_PREVENTA", "Find"),
         callAppSheetAPI("clientes", "Find"),
-        callAppSheetAPI("stock", "Find")
+        callAppSheetAPI("stock", "Find"),
+        callAppSheetAPI("DATOS EMPRESA", "Find")
       ]);
+
+      if (Array.isArray(datosEmpresaAS) && datosEmpresaAS.length > 0) {
+        const row = datosEmpresaAS[0];
+        const config = {
+          slogan: row["SLOGAN"] || '',
+          company: row["NOMBRES  DE EMPRESA"] || row["NOMBRES DE EMPRESA"] || '',
+          nit: row["NIT / ID EMPRESA"] || '',
+          nrc: row["NRC"] || '',
+          actividad: row["ACTIVIDAD ECONOMICA"] || row["ACTIVIDAD ECONÓMICA"] || '',
+          telefono: row["TELEFONO"] || '',
+          correo: row["CORREO"] || '',
+          footer1: row["PIE DE PAGINA LINEA 1"] || '',
+          footer2: row["PIE DE PAGINA LINEA 2"] || '',
+          logoSize: parseInt(row["TAMAÑO DEL LOGOTIPO"] || row["TAMAÑO DE LOGOTIPO"], 10) || 50
+        };
+        localStorage.setItem('ticket_config', JSON.stringify(config));
+        if (typeof applyTicketConfig === 'function') {
+          applyTicketConfig(config);
+        }
+      }
 
       if (Array.isArray(clientesAS) && clientesAS.length > 0) {
         const clientes = clientesAS.map(c => {
@@ -3259,7 +3280,23 @@
           body: JSON.stringify(config)
         });
       } catch (err) {
-        console.warn("No se pudo guardar la configuración del ticket en el servidor:", err.message);
+        console.warn("No se pudo guardar la configuración del ticket en el servidor, intentando directo en AppSheet:", err.message);
+        const rowToEdit = {
+          _RowNumber: "2",
+          "SLOGAN": config.slogan || "",
+          "NOMBRES  DE EMPRESA": config.company || "",
+          "NIT / ID EMPRESA": config.nit || "",
+          "NRC": config.nrc || "",
+          "ACTIVIDAD ECONOMICA": config.actividad || "",
+          "TELEFONO": config.telefono || "",
+          "CORREO": config.correo || "",
+          "PIE DE PAGINA LINEA 1": config.footer1 || "",
+          "PIE DE PAGINA LINEA 2": config.footer2 || "",
+          "TAMAÑO DEL LOGOTIPO": String(config.logoSize || 50)
+        };
+        await callAppSheetAPI("DATOS EMPRESA", "Edit", [rowToEdit]).catch(asErr => {
+          console.error("AppSheet Direct Edit failed:", asErr);
+        });
       }
     }
 

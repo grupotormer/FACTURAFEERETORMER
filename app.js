@@ -202,7 +202,19 @@ async function fetchInitialData() {
     const [clientsRes, productsRes, companyRes] = await Promise.all([clientsPromise, productsPromise, companyPromise]);
 
     state.clients = clientsRes || [];
-    state.products = productsRes || [];
+
+    // Deduplicate products by Material
+    const uniqueProducts = [];
+    const seenMaterials = new Set();
+    if (Array.isArray(productsRes)) {
+      productsRes.forEach(p => {
+        if (p.Material && !seenMaterials.has(p.Material)) {
+          seenMaterials.add(p.Material);
+          uniqueProducts.push(p);
+        }
+      });
+    }
+    state.products = uniqueProducts;
 
     if (Array.isArray(companyRes) && companyRes.length > 0) {
       const row = companyRes[0];
@@ -379,7 +391,7 @@ function renderCatalog() {
   } else {
     catalogEmpty.classList.add('hidden');
 
-    filtered.slice(0, 100).forEach(product => {
+    filtered.forEach(product => {
       const tr = document.createElement('tr');
       tr.className = 'hover:bg-slate-50 transition text-sm';
 

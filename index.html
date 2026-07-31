@@ -1365,15 +1365,19 @@
       }
 
       if (Array.isArray(stockAS) && stockAS.length > 0) {
-        const stock = stockAS.map(s => {
+        const seen = new Set();
+        const stock = [];
+        stockAS.forEach(s => {
           const n = {}; for (const k of Object.keys(s)) n[k.toLowerCase()] = s[k];
-          return {
-            material: n.material || '',
-            TextoBreveDelMaterial: s.TextoBreveDelMaterial || n.textobrevedelmaterial || '',
-            precio: parseFloat(s.Precio || n.precio) || 0,
-            concat: (n.concat || '').replace(/$/g, '$')
-          };
-        }).filter(s => s.material && s.concat);
+          const material = n.material || '';
+          const textobrevedelmaterial = s.TextoBreveDelMaterial || n.textobrevedelmaterial || '';
+          const precio = parseFloat(s.Precio || n.precio) || 0;
+          const concat = (n.concat || '').replace(/$/g, '$');
+          if (material && concat && !seen.has(material)) {
+            seen.add(material);
+            stock.push({ material, TextoBreveDelMaterial: textobrevedelmaterial, precio, concat });
+          }
+        });
         if (stock.length > 0) lsSet(LS_KEYS.stock, stock);
       }
 
@@ -1474,8 +1478,37 @@
       });
     });
 
-    // Fetch clients and products for autocomplete lists (desde caché local)
+    // Fetch clients and products for autocomplete lists
     async function fetchClientesAndProductos() {
+      try {
+        const [resClientes, resProductos] = await Promise.all([
+          fetch('/api/clientes'),
+          fetch('/api/productos')
+        ]);
+        if (resClientes.ok && resProductos.ok) {
+          const clientes = await resClientes.json();
+          const productos = await resProductos.json();
+
+          const mappedProductos = productos.map(p => ({
+            material: p.material,
+            TextoBreveDelMaterial: p.TextoBreveDelMaterial,
+            precio: p.precio,
+            concat: p.concat
+          }));
+
+          const mappedClientes = clientes.map(c => ({
+            id: c.id,
+            nombre: c.nombre,
+            telefono: c.telefono
+          }));
+
+          lsSet(LS_KEYS.clientes, mappedClientes);
+          lsSet(LS_KEYS.stock, mappedProductos);
+        }
+      } catch (err) {
+        console.warn("No se pudieron obtener clientes y productos del backend, usando caché local:", err.message);
+      }
+
       clientesGlobal = lsGet(LS_KEYS.clientes);
       productosGlobal = lsGet(LS_KEYS.stock);
       populateClientesDatalist();

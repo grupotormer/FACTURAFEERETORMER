@@ -192,6 +192,10 @@
               <i data-lucide="users" class="w-5 h-5 flex-shrink-0"></i>
               <span class="sidebar-text">clientes</span>
             </button>
+            <button onclick="switchTab('facturacion')" id="nav-btn-facturacion" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent">
+              <i data-lucide="file-text" class="w-5 h-5 flex-shrink-0"></i>
+              <span class="sidebar-text">Facturación SV</span>
+            </button>
           </nav>
         </div>
       </aside>
@@ -606,6 +610,262 @@
               </table>
             </div>
           </div>
+        </div>
+
+        <!-- Tab 5: Facturación Electrónica El Salvador -->
+        <div id="tab-view-facturacion" class="hidden space-y-8">
+
+          <!-- Wit.ai Voice/Natural Language Command Bar -->
+          <div class="bg-gradient-to-r from-primary-800 to-slate-800 rounded-2xl border border-primary-700 shadow-xl p-5 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3 w-full md:w-auto">
+              <div class="p-2.5 bg-primary-600/30 border border-primary-500/20 text-primary-300 rounded-xl">
+                <i data-lucide="cpu" class="w-6 h-6 animate-pulse"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-black text-white uppercase tracking-wider">Asistente de Voz NLP (Wit.ai)</h3>
+                <p class="text-xs text-primary-200">Diga o escriba comandos como: "Facturar la preventa 332" o "buscar cliente María"</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 w-full md:w-auto">
+              <input type="text" id="wit-input" placeholder="Ej. Facturar preventa 332..." class="flex-1 md:w-80 px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-primary-500 transition-all">
+              <button onclick="processWitNLP()" class="bg-primary-600 hover:bg-primary-500 text-white p-2.5 rounded-xl transition-all shadow-md flex items-center justify-center" title="Procesar comando de voz/texto">
+                <i data-lucide="mic" class="w-5 h-5" id="wit-mic-icon"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Billing Layout (Buscador y Formulario + Ticket Previo) -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+            <!-- Left Side: Search & Billing Data (7/12) -->
+            <div class="lg:col-span-7 space-y-6">
+
+              <!-- Search Pre-Sale -->
+              <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-2xl space-y-4">
+                <div class="flex items-center gap-2">
+                  <i data-lucide="search" class="text-emerald-400 w-5 h-5"></i>
+                  <h3 class="text-base font-bold text-white">Buscar Preventa para Facturar</h3>
+                </div>
+                <p class="text-xs text-slate-400">Ingrese el ID de una preventa (ej. 332 o 2026-01-M1P505-332) para cargar sus datos y artículos.</p>
+
+                <div class="flex gap-2">
+                  <input type="text" id="billing-search-id" placeholder="ID de Preventa..." class="flex-1 px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all font-mono font-bold">
+                  <button onclick="loadPreSaleForBilling()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg transition-all flex items-center gap-2">
+                    <i data-lucide="arrow-down-to-line" class="w-4 h-4"></i>
+                    Cargar
+                  </button>
+                </div>
+              </div>
+
+              <!-- Customer & DTE configuration (only visible when loaded) -->
+              <div id="billing-form-container" class="hidden bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-2xl space-y-6">
+
+                <div class="border-b border-slate-700 pb-4">
+                  <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider block mb-1">Datos del Cliente</span>
+                  <h4 class="text-xl font-extrabold text-white" id="billing-cliente-name">Cargando...</h4>
+                  <div class="grid grid-cols-2 gap-4 text-xs mt-3 text-slate-300">
+                    <div>
+                      <span class="text-slate-500 font-bold block uppercase">Teléfono:</span>
+                      <span id="billing-cliente-telefono">-</span>
+                    </div>
+                    <div>
+                      <span class="text-slate-500 font-bold block uppercase">Fecha Orden:</span>
+                      <span id="billing-cliente-fecha">-</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- DTE Type Select -->
+                <div class="space-y-4">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Tipo de Documento Tributario Electrónico (DTE)</label>
+                    <div class="relative">
+                      <select id="billing-dte-type" onchange="toggleDTEFields()" class="w-full pl-3.5 pr-10 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all cursor-pointer">
+                        <option value="FCF">Factura de Consumidor Final (DTE-01)</option>
+                        <option value="CCF">Comprobante de Crédito Fiscal (DTE-03)</option>
+                      </select>
+                      <i data-lucide="chevron-down" class="absolute right-3.5 top-3.5 h-4 w-4 text-slate-400 pointer-events-none"></i>
+                    </div>
+                  </div>
+
+                  <!-- Dynamic DTE fields based on type -->
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- DUI (Required for FCF if amount > $200) -->
+                    <div id="field-dui">
+                      <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">DUI del Receptor (Obligatorio > $200)</label>
+                      <input type="text" id="billing-dui" placeholder="00000000-0" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all font-mono">
+                    </div>
+                    <!-- NIT (Required for CCF) -->
+                    <div id="field-nit" class="hidden">
+                      <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">NIT del Contribuyente *</label>
+                      <input type="text" id="billing-nit" placeholder="0000-000000-000-0" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all font-mono">
+                    </div>
+                    <!-- NRC (Required for CCF) -->
+                    <div id="field-nrc" class="hidden">
+                      <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">NRC (Registro Contribuyente) *</label>
+                      <input type="text" id="billing-nrc" placeholder="Ej. 123456-7" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all font-mono">
+                    </div>
+                    <!-- Giro / Actividad Económica (Required for CCF) -->
+                    <div id="field-giro" class="hidden">
+                      <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Giro / Actividad Económica *</label>
+                      <input type="text" id="billing-giro" placeholder="Ej. Venta de repuestos" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Products Table -->
+                <div>
+                  <h4 class="text-sm font-bold text-white mb-3">Artículos a Facturar</h4>
+                  <div class="border border-slate-700 rounded-xl overflow-hidden bg-slate-900/20">
+                    <table class="w-full text-left text-xs">
+                      <thead>
+                        <tr class="bg-slate-900 border-b border-slate-700 text-slate-400 font-bold uppercase tracking-wider">
+                          <th class="py-2.5 px-4">Producto</th>
+                          <th class="py-2.5 px-3 text-center">Cant.</th>
+                          <th class="py-2.5 px-3 text-right">Precio</th>
+                          <th class="py-2.5 px-4 text-right">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody id="billing-items-body" class="divide-y divide-slate-800 text-slate-300">
+                        <!-- Populated by loaded sale -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- Subtotals and Hacienda Submission Button -->
+                <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 pt-4 border-t border-slate-700">
+                  <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700 text-xs space-y-1.5 min-w-[200px] text-right font-mono">
+                    <div class="flex justify-between text-slate-400">
+                      <span>Subtotal Neto:</span>
+                      <span id="billing-subtotal">0.00 $</span>
+                    </div>
+                    <div class="flex justify-between text-slate-400">
+                      <span>IVA (13%):</span>
+                      <span id="billing-iva">0.00 $</span>
+                    </div>
+                    <div class="flex justify-between font-black text-emerald-400 text-sm border-t border-slate-800 pt-1.5">
+                      <span>Gran Total:</span>
+                      <span id="billing-total">0.00 $</span>
+                    </div>
+                  </div>
+
+                  <button onclick="transmitDTEToHacienda()" class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-500 text-white px-6 py-4 rounded-xl text-base font-bold shadow-lg shadow-blue-600/10 hover:shadow-blue-500/20 transition-all flex items-center justify-center gap-3">
+                    <i data-lucide="cloud-lightning" class="w-6 h-6 text-yellow-300 animate-pulse"></i>
+                    Transmitir DTE al Ministerio de Hacienda
+                  </button>
+                </div>
+
+              </div>
+
+            </div>
+
+            <!-- Right Side: Digital DTE Representation & Print Area (5/12) -->
+            <div class="lg:col-span-5 flex flex-col items-center">
+
+              <!-- Digital DTE Ticket container (visible when simulated) -->
+              <div id="dte-receipt-card" class="hidden bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-2xl w-full flex flex-col items-center space-y-6">
+
+                <div class="w-full flex items-center justify-between text-xs text-slate-400">
+                  <span class="font-bold uppercase tracking-wide flex items-center gap-1.5 text-emerald-400">
+                    <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                    DTE VÁLIDO - PROCESADO POR MH
+                  </span>
+                  <span class="bg-slate-900 text-slate-400 px-2 py-0.5 rounded text-[10px] font-mono">PDF / Continuo</span>
+                </div>
+
+                <!-- Digital representation mimicking physical receipt -->
+                <div class="bg-white text-slate-900 p-5 rounded shadow-inner w-full max-w-[280px] font-mono text-xs border border-slate-300 leading-tight select-none" id="dte-digital-receipt">
+                  <div class="text-center space-y-1 mb-4">
+                    <img src="logoferre.png" alt="Logo" id="dte-ticket-logo" class="mx-auto w-auto object-contain mb-4" style="height: 50px;">
+                    <p id="dte-ticket-slogan" class="text-[10px] text-slate-700">Calidad y confianza en nuestros productos</p>
+                    <h4 id="dte-ticket-company" class="font-bold text-xs tracking-wide">Juan Carlos Torres García</h4>
+                    <p id="dte-ticket-nit" class="text-[10px] text-slate-700">NIT: 0507-271277-101-0</p>
+                    <p id="dte-ticket-nrc" class="text-[10px] text-slate-700">NRC: 123456-7</p>
+                    <p id="dte-ticket-actividad" class="text-[10px] text-slate-700"></p>
+                    <p id="dte-ticket-telefono-empresa" class="text-[10px] text-slate-700"></p>
+                    <p id="dte-ticket-correo" class="text-[10px] text-slate-700"></p>
+                  </div>
+
+                  <!-- DTE specific fields (MH validation data) -->
+                  <div class="space-y-1 text-[9px] mb-3 bg-blue-50 border border-blue-200 p-2 rounded text-blue-950">
+                    <p class="font-bold text-center text-[10px] uppercase border-b border-blue-200 pb-1 mb-1">DTE FACTURA ELECTRÓNICA</p>
+                    <p><strong>CÓD. GENERACIÓN (UUID):</strong><br><span id="dte-uuid-val" class="font-bold text-[8px] break-all"></span></p>
+                    <p class="mt-1"><strong>SELLO RECEPCIÓN MH:</strong><br><span id="dte-sello-val" class="font-bold text-[8px] break-all"></span></p>
+                    <p class="mt-1"><strong>FECHA EMISIÓN:</strong> <span id="dte-emision-date"></span></p>
+                  </div>
+
+                  <div class="space-y-1 text-[10px] mb-3">
+                    <p><strong>RECEPTOR:</strong> <span id="dte-recipient-name">CLIENTE</span></p>
+                    <p id="dte-recipient-dui-row"><strong>DUI:</strong> <span id="dte-recipient-dui"></span></p>
+                    <p id="dte-recipient-nit-row" class="hidden"><strong>NIT:</strong> <span id="dte-recipient-nit"></span></p>
+                    <p id="dte-recipient-nrc-row" class="hidden"><strong>NRC:</strong> <span id="dte-recipient-nrc"></span></p>
+                  </div>
+
+                  <p class="text-slate-400 overflow-hidden whitespace-nowrap mb-2">------------------------------------</p>
+
+                  <div class="space-y-1 text-[10px] mb-2">
+                    <div class="flex justify-between font-bold">
+                      <span>CONCEPTO</span>
+                      <span>TOTAL</span>
+                    </div>
+                    <div id="dte-ticket-items-body" class="space-y-1">
+                      <!-- Live items -->
+                    </div>
+                  </div>
+
+                  <p class="text-slate-400 overflow-hidden whitespace-nowrap mb-2">------------------------------------</p>
+
+                  <div class="space-y-1 text-right text-[10px] font-bold">
+                    <div class="flex justify-between">
+                      <span>Subtotal Neto:</span>
+                      <span id="dte-subtotal-val">0.00 $</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span>IVA (13%):</span>
+                      <span id="dte-iva-val">0.00 $</span>
+                    </div>
+                    <div class="flex justify-between text-xs font-black border-t border-dashed border-slate-300 pt-1">
+                      <span>TOTAL DTE:</span>
+                      <span id="dte-total-val" class="text-slate-900">0.00 $</span>
+                    </div>
+                  </div>
+
+                  <p class="text-slate-400 overflow-hidden whitespace-nowrap mt-3 mb-3">------------------------------------</p>
+
+                  <div class="text-center space-y-1">
+                    <p id="dte-ticket-footer1" class="text-[9px] font-bold">¡GRACIAS POR SU PREFERENCIA!</p>
+                    <p id="dte-ticket-footer2" class="text-[8px] text-slate-500">Este es un documento tributario electrónico firmado con certificado del emisor autorizado por el Ministerio de Hacienda de El Salvador.</p>
+                    <div class="flex flex-col items-center pt-2 gap-1">
+                      <div id="dte-ticket-qr" class="flex items-center justify-center"></div>
+                      <span class="text-[7px] text-slate-400 tracking-widest font-mono">VALIDACIÓN DIRECTA MH</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Print DTE button -->
+                <button onclick="printDTETicket()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-sm font-bold shadow-lg transition-all flex items-center justify-center gap-2">
+                  <i data-lucide="printer" class="w-4.5 h-4.5"></i>
+                  Imprimir DTE Físico (80mm)
+                </button>
+
+              </div>
+
+              <!-- Placeholder when no DTE is processed yet -->
+              <div id="dte-placeholder" class="bg-slate-800 p-12 rounded-2xl border border-slate-700 shadow-2xl w-full flex flex-col items-center justify-center text-center text-slate-400 space-y-4">
+                <div class="p-4 bg-slate-700/50 rounded-full">
+                  <i data-lucide="cloud-off" class="w-12 h-12 text-slate-500"></i>
+                </div>
+                <div>
+                  <h4 class="text-base font-bold text-white">Ningún DTE Procesado</h4>
+                  <p class="text-xs text-slate-400 mt-1 max-w-xs">Cargue una preventa y envíe el DTE para simular la transmisión al Ministerio de Hacienda de El Salvador y generar la factura firmada.</p>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
         </div>
 
       </div> <!-- End of Main Content Block -->
@@ -3341,7 +3601,7 @@
 
     // Tab switching mechanism
     function switchTab(tabId) {
-      const tabIds = ['preventas', 'template', 'productos', 'clientes'];
+      const tabIds = ['preventas', 'template', 'productos', 'clientes', 'facturacion'];
 
       // Hide all tabs
       tabIds.forEach(id => {
@@ -3500,6 +3760,403 @@
       // QR de ejemplo para la vista previa de la plantilla
       const tabQr = document.getElementById('preview-tab-qr');
       if (tabQr) tabQr.innerHTML = buildQrImgTag('PREVENTA-00332', 3);
+    }
+
+    // ============================================================
+    // LÓGICA DEL MÓDULO DE FACTURACIÓN ELECTRÓNICA (EL SALVADOR)
+    // ============================================================
+    let activeBillingPreSale = null;
+
+    function toggleDTEFields() {
+      const dteType = document.getElementById('billing-dte-type').value;
+      const duiField = document.getElementById('field-dui');
+      const nitField = document.getElementById('field-nit');
+      const nrcField = document.getElementById('field-nrc');
+      const giroField = document.getElementById('field-giro');
+
+      if (dteType === 'FCF') {
+        duiField.classList.remove('hidden');
+        nitField.classList.add('hidden');
+        nrcField.classList.add('hidden');
+        giroField.classList.add('hidden');
+      } else {
+        duiField.classList.add('hidden');
+        nitField.classList.remove('hidden');
+        nrcField.classList.remove('hidden');
+        giroField.classList.remove('hidden');
+      }
+
+      calculateBillingTotals();
+    }
+
+    async function loadPreSaleForBilling(preSaleId) {
+      let searchId = preSaleId || document.getElementById('billing-search-id').value.trim();
+      if (!searchId) {
+        showToast('Por favor, ingrese un ID de preventa válido.', 'warning');
+        return;
+      }
+
+      // Normalizar prefijo de preventa
+      if (!searchId.startsWith('2026-01-M1P505-') && !searchId.startsWith('PREV-') && !isNaN(parseInt(searchId, 10))) {
+        searchId = '2026-01-M1P505-' + searchId;
+      }
+
+      showToast(`Buscando preventa ${searchId}...`, 'info');
+
+      // 1. Buscar en memoria local del estado
+      let p = preventas.find(x => x.id === searchId);
+
+      // 2. Si no está en memoria, buscar en localStorage
+      if (!p) {
+        const preventasLocal = lsGet(LS_KEYS.preventa);
+        const detallesLocal = lsGet(LS_KEYS.detalle);
+        const localPresale = preventasLocal.find(x => x.id === searchId);
+        if (localPresale) {
+          p = { ...localPresale, detalles: detallesLocal.filter(d => d.preventa_id === searchId) };
+        }
+      }
+
+      // 3. Si no se encuentra, intentar hacer fetch desde la API
+      if (!p) {
+        try {
+          const res = await fetch(`/api/preventas/${searchId}`);
+          if (res.ok) {
+            p = await res.json();
+          }
+        } catch (e) {
+          console.warn("No se pudo obtener preventa de la API:", e.message);
+        }
+      }
+
+      if (!p) {
+        showToast(`No se encontró ninguna preventa con el ID ${searchId}.`, 'error');
+        return;
+      }
+
+      activeBillingPreSale = p;
+
+      // Llenar campos de la interfaz
+      document.getElementById('billing-cliente-name').textContent = p.cliente;
+      document.getElementById('billing-cliente-telefono').textContent = p.telefono || 'Sin Contacto';
+      document.getElementById('billing-cliente-fecha').textContent = p.fecha;
+
+      // Cargar DUI/NIT/NRC si el cliente existe en el directorio local
+      const matchedClient = clientesGlobal.find(c => c.nombre.toLowerCase() === p.cliente.toLowerCase());
+      if (matchedClient) {
+        document.getElementById('billing-nit').value = matchedClient.nit || matchedClient.id || '';
+        document.getElementById('billing-nrc').value = matchedClient.nrc || '';
+        document.getElementById('billing-dui').value = ''; // DUI se llena manual
+        document.getElementById('billing-giro').value = matchedClient.giro || '';
+      } else {
+        document.getElementById('billing-nit').value = '';
+        document.getElementById('billing-nrc').value = '';
+        document.getElementById('billing-dui').value = '';
+        document.getElementById('billing-giro').value = '';
+      }
+
+      // Rellenar tabla de artículos
+      const tbody = document.getElementById('billing-items-body');
+      tbody.innerHTML = '';
+
+      if (p.detalles && p.detalles.length > 0) {
+        p.detalles.forEach(d => {
+          const matchedProd = productosGlobal.find(pr => pr.material === d.producto);
+          const nameToDisplay = matchedProd && matchedProd.TextoBreveDelMaterial ? matchedProd.TextoBreveDelMaterial : d.producto;
+
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-slate-800/10 border-b border-slate-800/50";
+          tr.innerHTML = `
+            <td class="py-2 px-4 font-bold text-slate-100">${nameToDisplay.toUpperCase()}</td>
+            <td class="py-2 px-3 text-center font-mono">${d.cantidad}</td>
+            <td class="py-2 px-3 text-right font-mono">${d.precio_unitario.toFixed(2)} $</td>
+            <td class="py-2 px-4 text-right font-black text-emerald-400 font-mono">${d.subtotal.toFixed(2)} $</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } else {
+        tbody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-slate-500">Sin artículos asociados.</td></tr>';
+      }
+
+      // Mostrar contenedor del formulario de facturación
+      document.getElementById('billing-form-container').classList.remove('hidden');
+      document.getElementById('billing-search-id').value = searchId;
+
+      calculateBillingTotals();
+      showToast('Preventa cargada con éxito para facturar.', 'success');
+      lucide.createIcons();
+    }
+
+    function calculateBillingTotals() {
+      if (!activeBillingPreSale) return;
+
+      const dteType = document.getElementById('billing-dte-type').value;
+      const totalVal = activeBillingPreSale.total;
+
+      let subtotalNeto = 0;
+      let ivaCalculado = 0;
+
+      if (dteType === 'FCF') {
+        // En FCF, el IVA ya viene incluido en los precios finales de venta
+        // subtotal neto = total / 1.13
+        subtotalNeto = totalVal / 1.13;
+        ivaCalculado = totalVal - subtotalNeto;
+      } else {
+        // En CCF, el IVA (13%) se calcula explícitamente sobre el subtotal neto
+        // total neto = total / 1.13
+        subtotalNeto = totalVal / 1.13;
+        ivaCalculado = totalVal - subtotalNeto;
+      }
+
+      document.getElementById('billing-subtotal').textContent = `${subtotalNeto.toFixed(2)} $`;
+      document.getElementById('billing-iva').textContent = `${ivaCalculado.toFixed(2)} $`;
+      document.getElementById('billing-total').textContent = `${totalVal.toFixed(2)} $`;
+    }
+
+    // Simula la transmisión del DTE firmado digitalmente al Ministerio de Hacienda
+    function transmitDTEToHacienda() {
+      if (!activeBillingPreSale) return;
+
+      const dteType = document.getElementById('billing-dte-type').value;
+      const dui = document.getElementById('billing-dui').value.trim();
+      const nit = document.getElementById('billing-nit').value.trim();
+      const nrc = document.getElementById('billing-nrc').value.trim();
+      const giro = document.getElementById('billing-giro').value.trim();
+      const clientName = activeBillingPreSale.cliente;
+
+      // Validaciones según el tipo de DTE
+      if (dteType === 'CCF') {
+        if (!nit || !nrc || !giro) {
+          showToast('Para Crédito Fiscal son obligatorios el NIT, NRC y Giro.', 'warning');
+          return;
+        }
+      } else {
+        // FCF: DUI obligatorio si supera $200
+        if (activeBillingPreSale.total > 200 && !dui) {
+          showToast('Para facturas mayores de $200.00 es obligatorio ingresar el DUI.', 'warning');
+          return;
+        }
+      }
+
+      showToast('Firmando documento con JWS y transmitiendo al Ministerio de Hacienda...', 'info');
+
+      // Simular delay de comunicación con el MH
+      setTimeout(() => {
+        // Generar hashes y datos simulados del MH
+        const codGeneracion = 'DTE-FC33-' + Math.random().toString(36).substring(2, 10).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+        const selloRecepcion = 'MH-SELLO-' + Math.random().toString(36).substring(2, 15).toUpperCase() + '-' + Date.now();
+        const emisionDate = new Date().toLocaleString('es-SV', { timeZone: 'America/El_Salvador' });
+
+        // Actualizar digital ticket
+        document.getElementById('dte-uuid-val').textContent = codGeneracion;
+        document.getElementById('dte-sello-val').textContent = selloRecepcion;
+        document.getElementById('dte-emision-date').textContent = emisionDate;
+
+        document.getElementById('dte-recipient-name').textContent = clientName.toUpperCase();
+
+        if (dteType === 'FCF') {
+          document.getElementById('dte-recipient-dui-row').classList.remove('hidden');
+          document.getElementById('dte-recipient-dui').textContent = dui || 'N/D';
+          document.getElementById('dte-recipient-nit-row').classList.add('hidden');
+          document.getElementById('dte-recipient-nrc-row').classList.add('hidden');
+        } else {
+          document.getElementById('dte-recipient-dui-row').classList.add('hidden');
+          document.getElementById('dte-recipient-nit-row').classList.remove('hidden');
+          document.getElementById('dte-recipient-nit').textContent = nit;
+          document.getElementById('dte-recipient-nrc-row').classList.remove('hidden');
+          document.getElementById('dte-recipient-nrc').textContent = nrc;
+        }
+
+        // Cargar ítems en el DTE digital
+        const itemsBody = document.getElementById('dte-ticket-items-body');
+        itemsBody.innerHTML = '';
+        activeBillingPreSale.detalles.forEach(d => {
+          const matchedProd = productosGlobal.find(pr => pr.material === d.producto);
+          const nameToDisplay = matchedProd && matchedProd.TextoBreveDelMaterial ? matchedProd.TextoBreveDelMaterial : d.producto;
+
+          const div = document.createElement('div');
+          div.className = "space-y-0.5";
+          div.innerHTML = `
+            <div class="flex justify-between">
+              <span class="font-bold truncate max-w-[170px]">${nameToDisplay.toUpperCase()}</span>
+              <span>${d.subtotal.toFixed(2)} $</span>
+            </div>
+            <div class="text-[8px] text-slate-500 pl-2">
+              ${d.cantidad} UNID x ${d.precio_unitario.toFixed(2)} $
+            </div>
+          `;
+          itemsBody.appendChild(div);
+        });
+
+        // Totales del DTE
+        const subtotalVal = activeBillingPreSale.total / 1.13;
+        const ivaVal = activeBillingPreSale.total - subtotalVal;
+
+        document.getElementById('dte-subtotal-val').textContent = `${subtotalVal.toFixed(2)} $`;
+        document.getElementById('dte-iva-val').textContent = `${ivaVal.toFixed(2)} $`;
+        document.getElementById('dte-total-val').textContent = `${activeBillingPreSale.total.toFixed(2)} $`;
+
+        // Generar QR para validación en Hacienda SV
+        const qrUrl = `https://factura.gob.sv/consulta/DTE?generacion=${codGeneracion}&receptor=${clientName}`;
+        document.getElementById('dte-ticket-qr').innerHTML = buildQrImgTag(qrUrl, 3);
+
+        // Ocultar placeholder y mostrar recibo procesado
+        document.getElementById('dte-placeholder').classList.add('hidden');
+        document.getElementById('dte-receipt-card').classList.remove('hidden');
+
+        showToast('DTE Procesado y Autorizado con éxito por el Ministerio de Hacienda SV.', 'success');
+        lucide.createIcons();
+      }, 2000);
+    }
+
+    function printDTETicket() {
+      if (!activeBillingPreSale) return;
+
+      const canvas = document.getElementById('print-ticket-area');
+      const codGeneracion = document.getElementById('dte-uuid-val').textContent;
+      const selloRecepcion = document.getElementById('dte-sello-val').textContent;
+      const emisionDate = document.getElementById('dte-emision-date').textContent;
+      const dteType = document.getElementById('billing-dte-type').value;
+
+      // Leer la configuración real de la plantilla
+      let ticketCfg;
+      try {
+        const raw = localStorage.getItem('ticket_config');
+        ticketCfg = raw ? JSON.parse(raw) : DEFAULT_TICKET_CONFIG;
+      } catch (e) {
+        ticketCfg = DEFAULT_TICKET_CONFIG;
+      }
+
+      let itemsHtml = '';
+      activeBillingPreSale.detalles.forEach(d => {
+        const matchedProd = productosGlobal.find(pr => pr.material === d.producto);
+        const nameToDisplay = matchedProd && matchedProd.TextoBreveDelMaterial ? matchedProd.TextoBreveDelMaterial : d.producto;
+        itemsHtml += `
+          <div style="margin-bottom: 5px;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="font-weight: bold; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${nameToDisplay.toUpperCase()}</span>
+              <span>${d.subtotal.toFixed(2)} $</span>
+            </div>
+            <div style="font-size: 10px; color: #555; padding-left: 10px;">
+              ${d.cantidad} UNID x ${d.precio_unitario.toFixed(2)} $
+            </div>
+          </div>
+        `;
+      });
+
+      const dui = document.getElementById('billing-dui').value.trim();
+      const nit = document.getElementById('billing-nit').value.trim();
+      const nrc = document.getElementById('billing-nrc').value.trim();
+
+      const recipientHtml = dteType === 'FCF'
+        ? `<p style="margin: 2px 0;"><strong>RECEPTOR:</strong> ${activeBillingPreSale.cliente.toUpperCase()}</p>
+           <p style="margin: 2px 0;"><strong>DUI:</strong> ${dui || 'N/D'}</p>`
+        : `<p style="margin: 2px 0;"><strong>RECEPTOR:</strong> ${activeBillingPreSale.cliente.toUpperCase()}</p>
+           <p style="margin: 2px 0;"><strong>NIT:</strong> ${nit}</p>
+           <p style="margin: 2px 0;"><strong>NRC:</strong> ${nrc}</p>`;
+
+      const subtotalVal = activeBillingPreSale.total / 1.13;
+      const ivaVal = activeBillingPreSale.total - subtotalVal;
+
+      canvas.innerHTML = `
+        <div style="text-align: center; margin-bottom: 15px;">
+          <img src="logoferre.png" alt="Logo" style="margin: 0 auto 10px auto; display: block; height: ${ticketCfg.logoSize || 50}px; max-height: ${ticketCfg.logoSize || 50}px; object-fit: contain;">
+          <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.slogan}</p>
+          <h4 style="font-size: 13px; font-weight: bold; margin: 0 0 2px 0;">${ticketCfg.company}</h4>
+          <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.nit}</p>
+          <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.nrc || ''}</p>
+          <p style="font-size: 11px; color: #444; margin: 0 0 2px 0;">${ticketCfg.actividad || ''}</p>
+        </div>
+
+        <div style="font-size: 9px; margin-bottom: 12px; line-height: 1.3; background: #f3f4f6; border: 1px solid #d1d5db; padding: 6px; border-radius: 4px;">
+          <p style="margin: 2px 0; font-weight: bold; text-align: center;">DTE FACTURA ELECTRÓNICA</p>
+          <p style="margin: 4px 0 2px 0;"><strong>CÓD. GENERACIÓN (UUID):</strong><br><span style="font-size: 8px; font-family: monospace;">${codGeneracion}</span></p>
+          <p style="margin: 2px 0;"><strong>SELLO RECEPCIÓN MH:</strong><br><span style="font-size: 8px; font-family: monospace;">${selloRecepcion}</span></p>
+          <p style="margin: 2px 0;"><strong>FECHA EMISIÓN:</strong> ${emisionDate}</p>
+        </div>
+
+        <div style="font-size: 11px; margin-bottom: 12px; line-height: 1.3;">
+          ${recipientHtml}
+        </div>
+
+        <p style="letter-spacing: -1px; margin: 8px 0; color: #666; font-size: 12px;">------------------------------------</p>
+
+        <div style="font-size: 11px; margin-bottom: 10px;">
+          <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px;">
+            <span>CONCEPTO</span>
+            <span>TOTAL</span>
+          </div>
+          ${itemsHtml}
+        </div>
+
+        <p style="letter-spacing: -1px; margin: 8px 0; color: #666; font-size: 12px;">------------------------------------</p>
+
+        <div style="font-size: 11px; text-align: right; line-height: 1.4;">
+          <div style="display: flex; justify-content: space-between;">
+            <span>Subtotal Neto:</span>
+            <span>${subtotalVal.toFixed(2)} $</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span>IVA (13%):</span>
+            <span>${ivaVal.toFixed(2)} $</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 900; border-top: 1px dashed #333; padding-top: 6px; margin-top: 4px;">
+            <span>TOTAL DTE:</span>
+            <span>${activeBillingPreSale.total.toFixed(2)} $</span>
+          </div>
+        </div>
+
+        <p style="letter-spacing: -1px; margin: 15px 0 10px 0; color: #666; font-size: 12px;">------------------------------------</p>
+
+        <div style="text-align: center; font-size: 10px; line-height: 1.3;">
+          <p style="font-weight: bold; margin: 3px 0;">¡GRACIAS POR SU PREFERENCIA!</p>
+          <p style="color: #666; font-size: 9px; margin: 0 0 12px 0;">Este es un documento tributario electrónico firmado con certificado del emisor autorizado por el Ministerio de Hacienda de El Salvador.</p>
+
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+            ${buildQrImgTag(`https://factura.gob.sv/consulta/DTE?generacion=${codGeneracion}`, 3)}
+            <span style="font-size: 8px; color: #777; font-family: monospace;">VALIDACIÓN DIRECTA MH</span>
+          </div>
+        </div>
+      `;
+
+      // Trigger standard print dialog
+      setTimeout(() => {
+        window.print();
+      }, 50);
+    }
+
+    // Integración de NLP Wit.ai simulada para procesamiento de comandos naturales
+    function processWitNLP() {
+      const inputVal = document.getElementById('wit-input').value.trim();
+      if (!inputVal) {
+        showToast('Por favor, escriba un comando para el asistente.', 'warning');
+        return;
+      }
+
+      const micIcon = document.getElementById('wit-mic-icon');
+      micIcon.classList.add('animate-bounce', 'text-yellow-400');
+      showToast('Wit.ai analizando intenciones y entidades...', 'info');
+
+      setTimeout(() => {
+        micIcon.classList.remove('animate-bounce', 'text-yellow-400');
+
+        // Regex para buscar un ID de preventa de 1 a 6 dígitos al final o en el texto
+        const idRegex = /(?:preventa|orden|id|#)?\s*(\d+)/i;
+        const match = inputVal.match(idRegex);
+
+        if (match && match[1]) {
+          const extractedId = match[1];
+          showToast(`Wit.ai identificó la intención 'facturar_preventa' con entidad 'id_preventa': ${extractedId}`, 'success');
+          loadPreSaleForBilling(extractedId);
+        } else if (inputVal.toLowerCase().includes('buscar') || inputVal.toLowerCase().includes('cliente')) {
+          showToast(`Wit.ai identificó la intención 'buscar_cliente'`, 'success');
+          switchTab('clientes');
+          const searchWord = inputVal.replace(/buscar/i, '').replace(/cliente/i, '').trim();
+          document.getElementById('clientes-search').value = searchWord;
+          filterAndRenderClientesTable();
+        } else {
+          showToast('No se pudo identificar con alta confianza la intención en Wit.ai. Intente reescribir la orden.', 'warning');
+        }
+      }, 1500);
     }
   </script>
 </body>

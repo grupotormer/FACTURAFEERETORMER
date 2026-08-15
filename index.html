@@ -4052,6 +4052,15 @@
     // LÓGICA DEL MÓDULO DE CIERRE DE CAJA AL DÍA
     // ============================================================
 
+    function formatDateToDDMMYYYY(dateStr) {
+      if (!dateStr) return '';
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+      return dateStr;
+    }
+
     function renderCierreDeCaja() {
       const dateInput = document.getElementById('cierre-date');
       if (!dateInput) return;
@@ -4059,8 +4068,10 @@
       const selectedDate = dateInput.value || new Date().toISOString().split('T')[0];
       dateInput.value = selectedDate;
 
+      const formattedDisplayDate = formatDateToDDMMYYYY(selectedDate);
+
       const label = document.getElementById('cierre-date-label');
-      if (label) label.textContent = selectedDate;
+      if (label) label.textContent = formattedDisplayDate;
 
       // Filter pre-sales for the chosen date
       const daysSales = preventas.filter(p => parseDateToYYYYMMDD(p.fecha) === selectedDate);
@@ -4155,7 +4166,7 @@
       }
 
       // Update Digital Ticket Preview
-      document.getElementById('cierre-ticket-date').textContent = selectedDate;
+      document.getElementById('cierre-ticket-date').textContent = formattedDisplayDate;
       document.getElementById('cierre-ticket-count').textContent = count;
       document.getElementById('cierre-ticket-completed').textContent = completed;
       document.getElementById('cierre-ticket-pending').textContent = pending;
@@ -4279,7 +4290,7 @@
 
         <div style="text-align: center; background: #f3f4f6; border: 1px solid #d1d5db; padding: 6px; border-radius: 4px; margin-bottom: 10px;">
           <h5 style="font-size: 11px; font-weight: 900; margin: 0; text-transform: uppercase;">COMPROBANTE DE CIERRE DE CAJA</h5>
-          <p style="font-size: 10px; margin: 2px 0 0 0;">FECHA CIERRE: <strong>${selectedDate}</strong></p>
+          <p style="font-size: 10px; margin: 2px 0 0 0;">FECHA CIERRE: <strong>${formatDateToDDMMYYYY(selectedDate)}</strong></p>
         </div>
 
         <p style="letter-spacing: -1px; margin: 6px 0; color: #666; font-size: 12px;">------------------------------------</p>

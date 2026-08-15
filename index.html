@@ -4007,6 +4007,47 @@
       if (tabQr) tabQr.innerHTML = buildQrImgTag('PREVENTA-00332', 3);
     }
 
+    function parseDateToYYYYMMDD(dateStr) {
+      if (!dateStr) return '';
+      const str = String(dateStr).trim();
+
+      // Pattern YYYY-MM-DD... (e.g. "2026-01-20", "2026-01-20 14:30:00", "2026-01-20T14:30:00")
+      const isoMatch = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+      if (isoMatch) {
+        const year = isoMatch[1];
+        const month = isoMatch[2].padStart(2, '0');
+        const day = isoMatch[3].padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+
+      // Pattern DD/MM/YYYY... or D/M/YYYY (e.g. "20/01/2026 14:30:00", "20/1/2026")
+      const dmyMatch = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+      if (dmyMatch) {
+        const day = dmyMatch[1].padStart(2, '0');
+        const month = dmyMatch[2].padStart(2, '0');
+        const year = dmyMatch[3];
+        return `${year}-${month}-${day}`;
+      }
+
+      // Fallback to JS Date object
+      const d = new Date(str);
+      if (!isNaN(d.getTime())) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+
+      return '';
+    }
+
+    function extractTimeFromDateStr(dateStr) {
+      if (!dateStr) return '';
+      const str = String(dateStr).trim();
+      const timeMatch = str.match(/\b(\d{1,2}:\d{2}(?::\d{2})?(?:\s*[AP]M)?)\b/i);
+      return timeMatch ? timeMatch[1] : '';
+    }
+
     // ============================================================
     // LÓGICA DEL MÓDULO DE CIERRE DE CAJA AL DÍA
     // ============================================================
@@ -4022,7 +4063,7 @@
       if (label) label.textContent = selectedDate;
 
       // Filter pre-sales for the chosen date
-      const daysSales = preventas.filter(p => p.fecha === selectedDate);
+      const daysSales = preventas.filter(p => parseDateToYYYYMMDD(p.fecha) === selectedDate);
 
       // Calculations
       const count = daysSales.length;
@@ -4052,8 +4093,14 @@
             ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
             : "bg-amber-500/10 text-amber-400 border border-amber-500/20";
 
+          const timeStr = extractTimeFromDateStr(p.fecha);
+          const timeHtml = timeStr ? `<div class="text-[10px] text-slate-500 font-mono">${timeStr}</div>` : '';
+
           tr.innerHTML = `
-            <td class="py-2.5 px-3 font-mono font-bold text-slate-400">#${String(p.id).replace('2026-01-M1P505-', '')}</td>
+            <td class="py-2.5 px-3 font-mono font-bold text-slate-400">
+              #${String(p.id).replace('2026-01-M1P505-', '')}
+              ${timeHtml}
+            </td>
             <td class="py-2.5 px-4 font-bold text-slate-100">${p.cliente}</td>
             <td class="py-2.5 px-3 text-center">
               <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold ${badgeClass}">${p.estado}</span>
@@ -4169,7 +4216,7 @@
       const dateInput = document.getElementById('cierre-date');
       const selectedDate = dateInput ? (dateInput.value || new Date().toISOString().split('T')[0]) : new Date().toISOString().split('T')[0];
 
-      const daysSales = preventas.filter(p => p.fecha === selectedDate);
+      const daysSales = preventas.filter(p => parseDateToYYYYMMDD(p.fecha) === selectedDate);
       const count = daysSales.length;
       const completed = daysSales.filter(p => p.estado === 'Completado').length;
       const pending = daysSales.filter(p => p.estado === 'Pendiente').length;

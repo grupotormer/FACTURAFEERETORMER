@@ -61,7 +61,7 @@
         margin: 0 !important;
         padding: 0 !important;
       }
-      /* Hide everything except the ticket container marked for printing */
+      /* Hide everything except printable areas */
       #app-container, .modal-backdrop, .no-print {
         display: none !important;
       }
@@ -76,15 +76,30 @@
         font-size: 12px !important;
         line-height: 1.2 !important;
       }
-      /* Ensure clean typography for ticket when printed */
       #print-ticket-area * {
         color: black !important;
         background: transparent !important;
       }
-      /* Force paper size to thermal if supported */
+      /* Allow printing closure report modal if open */
+      #closure-report-modal {
+        position: static !important;
+        display: block !important;
+        background: white !important;
+        padding: 0 !important;
+      }
+      #closure-report-modal .modal-backdrop,
+      #closure-report-modal button {
+        display: none !important;
+      }
+      #closure-report-card {
+        max-width: 100% !important;
+        max-height: none !important;
+        box-shadow: none !important;
+        border: none !important;
+      }
       @page {
-        size: 80mm auto;
-        margin: 0;
+        size: auto;
+        margin: 10mm;
       }
     }
 
@@ -160,84 +175,185 @@
         <!-- Tab 6: Cierre de Caja al Día -->
         <div id="tab-view-cierre" class="hidden space-y-8">
 
-          <!-- Header & Date Picker Control Bar -->
-          <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
-              <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
-                <i data-lucide="calculator" class="w-6 h-6"></i>
+          <!-- Header & Date Filter Control Bar -->
+          <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-2xl space-y-4">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div class="flex items-center gap-3">
+                <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
+                  <i data-lucide="calculator" class="w-6 h-6"></i>
+                </div>
+                <div>
+                  <h3 class="text-lg font-bold text-white">Cierre de Caja</h3>
+                  <p class="text-xs text-slate-400">Resumen consolidado de ventas, arqueo de efectivo e impresión de comprobante de cierre.</p>
+                </div>
               </div>
-              <div>
-                <h3 class="text-lg font-bold text-white">Cierre de Caja Diario</h3>
-                <p class="text-xs text-slate-400">Resumen consolidado de ventas e impresión de comprobante de cierre.</p>
+
+              <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+                <button onclick="openClosureReportModal()" class="bg-slate-900 hover:bg-slate-950 text-white px-4 py-2 rounded-xl text-sm font-bold border border-slate-700 shadow-lg transition-all flex items-center gap-2">
+                  <i data-lucide="file-check" class="w-4 h-4 text-emerald-400"></i>
+                  Generar Reporte de Cierre
+                </button>
+                <button onclick="printCierreTicket()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/10 hover:shadow-emerald-500/20 transition-all flex items-center gap-2">
+                  <i data-lucide="printer" class="w-4 h-4"></i>
+                  Imprimir Comprobante
+                </button>
               </div>
             </div>
 
-            <div class="flex items-center gap-3 w-full md:w-auto">
-              <div class="flex items-center gap-2">
-                <label for="cierre-date" class="text-xs font-bold text-slate-300 uppercase tracking-wider">Fecha:</label>
-                <input type="date" id="cierre-date" onchange="renderCierreDeCaja()" class="px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all font-mono">
+            <!-- Preset Filter Buttons Bar -->
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-t border-slate-700/60 pt-4">
+              <div class="flex items-center gap-2 text-xs font-bold text-slate-300">
+                <i data-lucide="calendar" class="w-4 h-4 text-blue-400"></i>
+                <span>Filtro de Fecha / Período:</span>
               </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button id="cierre-preset-all" onclick="setCierreDatePreset('all')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors">Todas</button>
+                <button id="cierre-preset-today" onclick="setCierreDatePreset('today')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white shadow-sm transition-colors">Hoy</button>
+                <button id="cierre-preset-yesterday" onclick="setCierreDatePreset('yesterday')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors">Ayer</button>
+                <button id="cierre-preset-last7" onclick="setCierreDatePreset('last7')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors">Últimos 7 Días</button>
+                <button id="cierre-preset-custom" onclick="setCierreDatePreset('custom')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors">Personalizado</button>
+              </div>
+            </div>
 
-              <button onclick="printCierreTicket()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/10 hover:shadow-emerald-500/20 transition-all flex items-center gap-2">
-                <i data-lucide="printer" class="w-4 h-4"></i>
-                Imprimir Comprobante
-              </button>
+            <!-- Custom Date Range Controls (Visible when preset is custom or single date) -->
+            <div id="cierre-custom-date-container" class="flex flex-wrap items-center gap-4 pt-2 text-xs text-slate-300">
+              <div class="flex items-center gap-2">
+                <label for="cierre-date" class="font-bold">Fecha / Inicio:</label>
+                <input type="date" id="cierre-date" onchange="renderCierreDeCaja()" class="px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 transition-all font-mono">
+              </div>
+              <div id="cierre-end-date-box" class="hidden flex items-center gap-2">
+                <label for="cierre-end-date" class="font-bold">Hasta:</label>
+                <input type="date" id="cierre-end-date" onchange="renderCierreDeCaja()" class="px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 transition-all font-mono">
+              </div>
             </div>
           </div>
 
-          <!-- KPI Cards for the selected day -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+          <!-- KPI Cards for the selected period -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
 
-            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl flex items-center gap-4">
-              <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
-                <i data-lucide="dollar-sign" class="w-6 h-6"></i>
+            <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-xl flex items-center gap-3">
+              <div class="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
+                <i data-lucide="dollar-sign" class="w-5 h-5"></i>
               </div>
               <div>
-                <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Recaudado</p>
-                <h3 class="text-2xl font-bold text-white mt-1" id="cierre-stat-total">0.00 $</h3>
+                <p class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">Total Ventas</p>
+                <h3 class="text-xl font-bold text-white mt-0.5" id="cierre-stat-total">0.00 $</h3>
               </div>
             </div>
 
-            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl flex items-center gap-4">
-              <div class="p-3 bg-blue-500/10 text-blue-400 rounded-xl border border-blue-500/20">
-                <i data-lucide="shopping-bag" class="w-6 h-6"></i>
+            <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-xl flex items-center gap-3">
+              <div class="p-2.5 bg-blue-500/10 text-blue-400 rounded-xl border border-blue-500/20">
+                <i data-lucide="trending-up" class="w-5 h-5"></i>
               </div>
               <div>
-                <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Transacciones</p>
-                <h3 class="text-2xl font-bold text-white mt-1" id="cierre-stat-count">0</h3>
+                <p class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">Subtotal (Sin IVA)</p>
+                <h3 class="text-xl font-bold text-white mt-0.5" id="cierre-stat-subtotal">0.00 $</h3>
               </div>
             </div>
 
-            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl flex items-center gap-4">
-              <div class="p-3 bg-green-500/10 text-green-400 rounded-xl border border-green-500/20">
-                <i data-lucide="check-circle-2" class="w-6 h-6"></i>
+            <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-xl flex items-center gap-3">
+              <div class="p-2.5 bg-purple-500/10 text-purple-400 rounded-xl border border-purple-500/20">
+                <i data-lucide="percent" class="w-5 h-5"></i>
               </div>
               <div>
-                <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Completadas</p>
-                <h3 class="text-2xl font-bold text-white mt-1" id="cierre-stat-completed">0</h3>
+                <p class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">Total IVA (13%)</p>
+                <h3 class="text-xl font-bold text-white mt-0.5" id="cierre-stat-iva">0.00 $</h3>
               </div>
             </div>
 
-            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl flex items-center gap-4">
-              <div class="p-3 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20">
-                <i data-lucide="clock" class="w-6 h-6"></i>
+            <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-xl flex items-center gap-3">
+              <div class="p-2.5 bg-green-500/10 text-green-400 rounded-xl border border-green-500/20">
+                <i data-lucide="check-circle-2" class="w-5 h-5"></i>
               </div>
               <div>
-                <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Pendientes</p>
-                <h3 class="text-2xl font-bold text-white mt-1" id="cierre-stat-pending">0</h3>
+                <p class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">Completadas</p>
+                <h3 class="text-xl font-bold text-white mt-0.5" id="cierre-stat-completed">0</h3>
               </div>
             </div>
 
-            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl flex items-center gap-4">
-              <div class="p-3 bg-purple-500/10 text-purple-400 rounded-xl border border-purple-500/20">
-                <i data-lucide="receipt" class="w-6 h-6"></i>
+            <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-xl flex items-center gap-3">
+              <div class="p-2.5 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20">
+                <i data-lucide="clock" class="w-5 h-5"></i>
               </div>
               <div>
-                <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Ticket Promedio</p>
-                <h3 class="text-2xl font-bold text-white mt-1" id="cierre-stat-avg">0.00 $</h3>
+                <p class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">Pendientes</p>
+                <h3 class="text-xl font-bold text-white mt-0.5" id="cierre-stat-pending">0</h3>
               </div>
             </div>
 
+            <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-xl flex items-center gap-3">
+              <div class="p-2.5 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20">
+                <i data-lucide="receipt" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <p class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">Ticket Promedio</p>
+                <h3 class="text-xl font-bold text-white mt-0.5" id="cierre-stat-avg">0.00 $</h3>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Arqueo de Caja Físico (Conteo de Efectivo) -->
+          <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-2xl space-y-6">
+            <div class="flex items-center justify-between border-b border-slate-700 pb-4">
+              <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-blue-500/10 text-blue-400 rounded-xl border border-blue-500/20">
+                  <i data-lucide="calculator" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <h4 class="text-base font-bold text-white">Arqueo de Caja Físico (Conteo de Efectivo)</h4>
+                  <p class="text-xs text-slate-400">Ingrese la cantidad de billetes y monedas para comparar contra las ventas del sistema.</p>
+                </div>
+              </div>
+              <button onclick="resetArqueoCounts()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5">
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                Limpiar Conteo
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <!-- Denominations Grid (8/12) -->
+              <div class="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-3" id="arqueo-grid-container">
+                <!-- Denomination inputs rendered dynamically -->
+              </div>
+
+              <!-- Summary Card (4/12) -->
+              <div class="lg:col-span-4 bg-slate-900/80 p-5 rounded-xl border border-slate-700/80 flex flex-col justify-between space-y-4">
+                <div class="space-y-3">
+                  <h5 class="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-2">Resumen de Arqueo</h5>
+                  <div class="flex justify-between text-xs text-slate-300">
+                    <span>Ventas del Sistema:</span>
+                    <span class="font-bold text-white" id="arqueo-ventas-sistema">0.00 $</span>
+                  </div>
+                  <div class="flex justify-between items-center text-xs text-slate-300">
+                    <span>Fondo Inicial (Base):</span>
+                    <div class="flex items-center gap-1">
+                      <input type="number" id="arqueo-fondo-inicial" min="0" step="0.01" value="50.00" oninput="updateFondoInicial(this.value)" class="w-20 px-2 py-1 text-right bg-slate-800 border border-slate-700 rounded-lg text-xs font-bold text-white focus:outline-none focus:border-emerald-500">
+                      <span>$</span>
+                    </div>
+                  </div>
+                  <div class="flex justify-between text-xs text-slate-300 font-bold border-t border-slate-800 pt-2">
+                    <span>Efectivo Esperado:</span>
+                    <span class="text-blue-400" id="arqueo-efectivo-esperado">0.00 $</span>
+                  </div>
+                  <div class="flex justify-between text-xs text-slate-300 font-bold">
+                    <span>Efectivo Contado:</span>
+                    <span class="text-emerald-400" id="arqueo-efectivo-contado">0.00 $</span>
+                  </div>
+                </div>
+
+                <div class="border-t border-slate-800 pt-3">
+                  <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Diferencia:</span>
+                    <span class="text-lg font-black text-emerald-400" id="arqueo-diferencia">0.00 $</span>
+                  </div>
+                  <div id="arqueo-status-box" class="p-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <i data-lucide="check-circle-2" class="w-4 h-4 shrink-0"></i>
+                    <span>Caja cuadrada (Sin diferencia)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Main Content: Sales & Products Tables + Digital Ticket Preview -->
@@ -360,9 +476,21 @@
                   <p class="text-slate-400 overflow-hidden whitespace-nowrap mb-2">------------------------------------</p>
 
                   <div class="space-y-1 text-right text-[10px] font-bold">
+                    <div class="flex justify-between text-slate-700">
+                      <span>VENTAS SISTEMA:</span>
+                      <span id="cierre-ticket-total">0.00 $</span>
+                    </div>
+                    <div class="flex justify-between text-slate-700">
+                      <span>FONDO INICIAL:</span>
+                      <span id="cierre-ticket-fondo">0.00 $</span>
+                    </div>
+                    <div class="flex justify-between text-slate-700">
+                      <span>EFECTIVO CONTADO:</span>
+                      <span id="cierre-ticket-contado">0.00 $</span>
+                    </div>
                     <div class="flex justify-between text-xs font-black border-t border-dashed border-slate-300 pt-1">
-                      <span>TOTAL GENERAL:</span>
-                      <span id="cierre-ticket-total" class="text-slate-900">0.00 $</span>
+                      <span>DIFERENCIA (CUADRE):</span>
+                      <span id="cierre-ticket-diferencia" class="text-slate-900">0.00 $</span>
                     </div>
                   </div>
 
@@ -1348,6 +1476,133 @@
     </div>
   </div>
 
+
+  <!-- Modal 0: General Closure Report Modal (A4/Printable Summary) -->
+  <div id="closure-report-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm modal-backdrop" onclick="closeClosureReportModal()"></div>
+    <div class="bg-white text-slate-900 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[92vh] overflow-hidden flex flex-col relative z-10 transition-all scale-95 opacity-0 duration-200 border border-slate-200" id="closure-report-card">
+
+      <!-- Top Action Bar -->
+      <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between sticky top-0 z-20">
+        <div class="flex items-center gap-2.5">
+          <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20">
+            <i data-lucide="file-check" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Informe General de Cierre de Caja</h3>
+            <p class="text-xs text-slate-400">Resumen ejecutivo y conciliación física para auditoría interna.</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="printClosureReportModal()" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all shadow-sm">
+            <i data-lucide="printer" class="w-4 h-4"></i> Imprimir / PDF
+          </button>
+          <button onclick="closeClosureReportModal()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Scrollable Printable Report Body -->
+      <div class="overflow-y-auto flex-1 p-8 space-y-6 text-slate-800" id="closure-report-printable-area">
+        <!-- Header -->
+        <div class="border-b-2 border-slate-900 pb-4 flex justify-between items-start">
+          <div>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight uppercase">REPORTE DE CIERRE DE CAJA</h1>
+            <p class="text-xs text-slate-500 font-semibold mt-0.5">Control Interno • Tormer Systems Link</p>
+          </div>
+          <div class="text-right text-xs text-slate-600">
+            <p class="font-bold text-slate-900">Fecha de Emisión:</p>
+            <p id="report-emision-date">-</p>
+            <p class="mt-1 font-semibold text-blue-700">Período: <span id="report-period-label">-</span></p>
+          </div>
+        </div>
+
+        <!-- Section 1: System Totals -->
+        <div>
+          <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">1. Resumen de Operaciones (Sistema)</h2>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+              <span class="text-slate-500 font-medium">Total Transacciones</span>
+              <p class="text-base font-bold text-slate-900" id="report-stat-count">0</p>
+            </div>
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+              <span class="text-slate-500 font-medium">Ventas Completadas</span>
+              <p class="text-base font-bold text-emerald-700" id="report-stat-completed">0</p>
+            </div>
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+              <span class="text-slate-500 font-medium">Ventas Pendientes</span>
+              <p class="text-base font-bold text-amber-700" id="report-stat-pending">0</p>
+            </div>
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+              <span class="text-slate-500 font-medium">Subtotal (Sin IVA)</span>
+              <p class="text-base font-bold text-slate-900" id="report-stat-subtotal">0.00 $</p>
+            </div>
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+              <span class="text-slate-500 font-medium">IVA Recolectado (13%)</span>
+              <p class="text-base font-bold text-slate-900" id="report-stat-iva">0.00 $</p>
+            </div>
+            <div class="p-3 bg-blue-50 border border-blue-200 rounded-xl">
+              <span class="text-blue-700 font-bold">TOTAL VENTAS</span>
+              <p class="text-lg font-black text-blue-900" id="report-stat-total">0.00 $</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Cash Reconciliation & Arqueo -->
+        <div>
+          <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">2. Conciliación y Arqueo Físico de Caja</h2>
+          <div class="border border-slate-200 rounded-xl overflow-hidden text-xs">
+            <table class="w-full text-left">
+              <tbody class="divide-y divide-slate-200">
+                <tr class="bg-slate-50">
+                  <td class="p-3 font-semibold text-slate-700">Total Ventas Registradas (Sistema)</td>
+                  <td class="p-3 font-bold text-right text-slate-900" id="report-reconcil-sales">0.00 $</td>
+                </tr>
+                <tr>
+                  <td class="p-3 font-semibold text-slate-700">(+) Fondo Inicial de Caja (Base)</td>
+                  <td class="p-3 font-bold text-right text-slate-900" id="report-reconcil-fondo">0.00 $</td>
+                </tr>
+                <tr class="bg-slate-100 font-bold">
+                  <td class="p-3 text-slate-900">(=) Efectivo Total Esperado en Caja</td>
+                  <td class="p-3 text-right text-blue-700" id="report-reconcil-esperado">0.00 $</td>
+                </tr>
+                <tr>
+                  <td class="p-3 font-semibold text-slate-700">(=) Efectivo Contado (Arqueo Físico)</td>
+                  <td class="p-3 font-bold text-right text-emerald-700" id="report-reconcil-contado">0.00 $</td>
+                </tr>
+                <tr class="font-black text-sm bg-slate-50" id="report-reconcil-diff-row">
+                  <td class="p-3 uppercase">Diferencia de Caja (Cuadre)</td>
+                  <td class="p-3 text-right" id="report-reconcil-diff">0.00 $</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mt-3" id="report-reconcil-status-banner">
+            <!-- Dynamic status banner -->
+          </div>
+        </div>
+
+        <!-- Section 3: Signatures -->
+        <div class="pt-10 grid grid-cols-2 gap-12 text-center text-xs text-slate-600">
+          <div>
+            <div class="border-t border-slate-400 pt-2">
+              <p class="font-bold text-slate-900">Firma Cajero(a)</p>
+              <p class="text-[11px] text-slate-400">Nombre y DNI / Firma</p>
+            </div>
+          </div>
+          <div>
+            <div class="border-t border-slate-400 pt-2">
+              <p class="font-bold text-slate-900">Firma Supervisor / Administrador</p>
+              <p class="text-[11px] text-slate-400">Nombre y DNI / Firma</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
 
   <!-- Modal 2: View Details & Ticket Panel -->
   <div id="detail-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -4052,6 +4307,127 @@
     // LÓGICA DEL MÓDULO DE CIERRE DE CAJA AL DÍA
     // ============================================================
 
+    const CASH_DENOMINATIONS = [
+      { key: '100', label: '$100.00 (Billete)', value: 100 },
+      { key: '50', label: '$50.00 (Billete)', value: 50 },
+      { key: '20', label: '$20.00 (Billete)', value: 20 },
+      { key: '10', label: '$10.00 (Billete)', value: 10 },
+      { key: '5', label: '$5.00 (Billete)', value: 5 },
+      { key: '1', label: '$1.00 (Billete / Moneda)', value: 1 },
+      { key: '0.25', label: '$0.25 (Moneda)', value: 0.25 },
+      { key: '0.10', label: '$0.10 (Moneda)', value: 0.10 },
+      { key: '0.05', label: '$0.05 (Moneda)', value: 0.05 },
+      { key: '0.01', label: '$0.01 (Moneda)', value: 0.01 }
+    ];
+
+    let arqueoCounts = {
+      '100': 0, '50': 0, '20': 0, '10': 0, '5': 0,
+      '1': 0, '0.25': 0, '0.10': 0, '0.05': 0, '0.01': 0
+    };
+    let arqueoFondoInicial = 50.00;
+    let currentCierreSalesTotal = 0;
+
+    function renderArqueoGrid() {
+      const container = document.getElementById('arqueo-grid-container');
+      if (!container) return;
+
+      container.innerHTML = CASH_DENOMINATIONS.map(d => {
+        const qty = arqueoCounts[d.key] || 0;
+        const subtotal = qty * d.value;
+        return `
+          <div class="flex items-center justify-between p-2.5 bg-slate-900/60 border border-slate-700/70 rounded-xl">
+            <span class="text-xs font-semibold text-slate-300">${d.label}</span>
+            <div class="flex items-center gap-2">
+              <input type="number" min="0" value="${qty === 0 ? '' : qty}" placeholder="0" oninput="updateArqueoCount('${d.key}', this.value)" class="w-16 px-2 py-1 text-right text-xs bg-slate-800 border border-slate-700 rounded-lg text-white font-bold focus:outline-none focus:border-emerald-500">
+              <span class="text-xs font-bold text-emerald-400 w-16 text-right">${subtotal.toFixed(2)} $</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function updateArqueoCount(key, val) {
+      const num = Math.max(0, parseInt(val, 10) || 0);
+      arqueoCounts[key] = num;
+      calculateArqueoTotals();
+      renderArqueoGrid();
+    }
+
+    function resetArqueoCounts() {
+      Object.keys(arqueoCounts).forEach(k => { arqueoCounts[k] = 0; });
+      calculateArqueoTotals();
+      renderArqueoGrid();
+    }
+
+    function updateFondoInicial(val) {
+      arqueoFondoInicial = parseFloat(val) || 0.0;
+      calculateArqueoTotals();
+    }
+
+    function calculateArqueoTotals(salesTotal) {
+      if (typeof salesTotal === 'number') {
+        currentCierreSalesTotal = salesTotal;
+      }
+      const countedCash = CASH_DENOMINATIONS.reduce((sum, d) => sum + (arqueoCounts[d.key] || 0) * d.value, 0);
+      const totalExpected = currentCierreSalesTotal + arqueoFondoInicial;
+      const difference = countedCash - totalExpected;
+
+      const ventasEl = document.getElementById('arqueo-ventas-sistema');
+      if (ventasEl) ventasEl.textContent = `${currentCierreSalesTotal.toFixed(2)} $`;
+
+      const esperadoEl = document.getElementById('arqueo-efectivo-esperado');
+      if (esperadoEl) esperadoEl.textContent = `${totalExpected.toFixed(2)} $`;
+
+      const contadoEl = document.getElementById('arqueo-efectivo-contado');
+      if (contadoEl) contadoEl.textContent = `${countedCash.toFixed(2)} $`;
+
+      const diffEl = document.getElementById('arqueo-diferencia');
+      if (diffEl) diffEl.textContent = `${difference.toFixed(2)} $`;
+
+      const statusBox = document.getElementById('arqueo-status-box');
+      if (statusBox) {
+        if (Math.abs(difference) < 0.001) {
+          statusBox.className = "p-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+          statusBox.innerHTML = `<i data-lucide="check-circle-2" class="w-4 h-4 shrink-0"></i><span>Caja cuadrada (Sin diferencia)</span>`;
+        } else if (difference > 0) {
+          statusBox.className = "p-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 bg-blue-500/10 text-blue-400 border border-blue-500/20";
+          statusBox.innerHTML = `<i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i><span>Sobrante de caja: ${difference.toFixed(2)} $</span>`;
+        } else {
+          statusBox.className = "p-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 bg-red-500/10 text-red-400 border border-red-500/20";
+          statusBox.innerHTML = `<i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i><span>Faltante de caja: ${Math.abs(difference).toFixed(2)} $</span>`;
+        }
+        lucide.createIcons();
+      }
+    }
+
+    let cierreDatePreset = 'today';
+
+    function setCierreDatePreset(preset) {
+      cierreDatePreset = preset;
+      const presets = ['all', 'today', 'yesterday', 'last7', 'custom'];
+      presets.forEach(p => {
+        const btn = document.getElementById(`cierre-preset-${p}`);
+        if (btn) {
+          if (p === preset) {
+            btn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white shadow-sm transition-colors";
+          } else {
+            btn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors";
+          }
+        }
+      });
+
+      const endDateBox = document.getElementById('cierre-end-date-box');
+      if (endDateBox) {
+        if (preset === 'custom') {
+          endDateBox.classList.remove('hidden');
+        } else {
+          endDateBox.classList.add('hidden');
+        }
+      }
+
+      renderCierreDeCaja();
+    }
+
     function formatDateToDDMMYYYY(dateStr) {
       if (!dateStr) return '';
       const parts = dateStr.split('-');
@@ -4061,34 +4437,102 @@
       return dateStr;
     }
 
+    function getFilteredCierreSales() {
+      const now = new Date();
+      const todayISO = now.toISOString().split('T')[0];
+
+      if (cierreDatePreset === 'all') {
+        return preventas;
+      }
+
+      if (cierreDatePreset === 'today') {
+        const dateInput = document.getElementById('cierre-date');
+        const selDate = (dateInput && dateInput.value) ? dateInput.value : todayISO;
+        return preventas.filter(p => parseDateToYYYYMMDD(p.fecha) === selDate);
+      }
+
+      if (cierreDatePreset === 'yesterday') {
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        const yestISO = yesterday.toISOString().split('T')[0];
+        const dateInput = document.getElementById('cierre-date');
+        if (dateInput) dateInput.value = yestISO;
+        return preventas.filter(p => parseDateToYYYYMMDD(p.fecha) === yestISO);
+      }
+
+      if (cierreDatePreset === 'last7') {
+        const sevenDaysAgo = new Date(now);
+        sevenDaysAgo.setDate(now.getDate() - 7);
+        sevenDaysAgo.setHours(0, 0, 0, 0);
+        return preventas.filter(p => {
+          const dStr = parseDateToYYYYMMDD(p.fecha);
+          if (!dStr) return false;
+          const d = new Date(dStr + 'T00:00:00');
+          return d >= sevenDaysAgo;
+        });
+      }
+
+      if (cierreDatePreset === 'custom') {
+        const startVal = document.getElementById('cierre-date')?.value;
+        const endVal = document.getElementById('cierre-end-date')?.value;
+
+        return preventas.filter(p => {
+          const dStr = parseDateToYYYYMMDD(p.fecha);
+          if (!dStr) return false;
+          if (startVal && dStr < startVal) return false;
+          if (endVal && dStr > endVal) return false;
+          return true;
+        });
+      }
+
+      return preventas;
+    }
+
     function renderCierreDeCaja() {
       const dateInput = document.getElementById('cierre-date');
-      if (!dateInput) return;
+      if (dateInput && !dateInput.value) {
+        dateInput.value = new Date().toISOString().split('T')[0];
+      }
 
-      const selectedDate = dateInput.value || new Date().toISOString().split('T')[0];
-      dateInput.value = selectedDate;
-
-      const formattedDisplayDate = formatDateToDDMMYYYY(selectedDate);
-
-      const label = document.getElementById('cierre-date-label');
-      if (label) label.textContent = formattedDisplayDate;
-
-      // Filter pre-sales for the chosen date
-      const daysSales = preventas.filter(p => parseDateToYYYYMMDD(p.fecha) === selectedDate);
+      const daysSales = getFilteredCierreSales();
 
       // Calculations
       const count = daysSales.length;
       const completed = daysSales.filter(p => p.estado === 'Completado').length;
       const pending = daysSales.filter(p => p.estado === 'Pendiente').length;
       const totalRev = daysSales.reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
+      const totalSubtotal = totalRev / 1.13;
+      const totalIva = totalRev - totalSubtotal;
       const avgTicket = count > 0 ? (totalRev / count) : 0;
+
+      // Update date label display
+      const label = document.getElementById('cierre-date-label');
+      if (label) {
+        if (cierreDatePreset === 'all') label.textContent = 'Todas las fechas';
+        else if (cierreDatePreset === 'last7') label.textContent = 'Últimos 7 días';
+        else if (cierreDatePreset === 'custom') {
+          const s = dateInput?.value ? formatDateToDDMMYYYY(dateInput.value) : 'Inicio';
+          const e = document.getElementById('cierre-end-date')?.value ? formatDateToDDMMYYYY(document.getElementById('cierre-end-date').value) : 'Fin';
+          label.textContent = `${s} - ${e}`;
+        } else {
+          label.textContent = formatDateToDDMMYYYY(dateInput?.value || '');
+        }
+      }
 
       // Update KPI cards
       document.getElementById('cierre-stat-total').textContent = `${totalRev.toFixed(2)} $`;
-      document.getElementById('cierre-stat-count').textContent = count;
+      const subEl = document.getElementById('cierre-stat-subtotal');
+      if (subEl) subEl.textContent = `${totalSubtotal.toFixed(2)} $`;
+      const ivaEl = document.getElementById('cierre-stat-iva');
+      if (ivaEl) ivaEl.textContent = `${totalIva.toFixed(2)} $`;
+
       document.getElementById('cierre-stat-completed').textContent = completed;
       document.getElementById('cierre-stat-pending').textContent = pending;
       document.getElementById('cierre-stat-avg').textContent = `${avgTicket.toFixed(2)} $`;
+
+      // Render Arqueo grid & calculate totals
+      renderArqueoGrid();
+      calculateArqueoTotals(totalRev);
 
       // Update Sales Table
       const salesBody = document.getElementById('cierre-sales-body');
@@ -4166,12 +4610,22 @@
       }
 
       // Update Digital Ticket Preview
+      const countedCash = CASH_DENOMINATIONS.reduce((sum, d) => sum + (arqueoCounts[d.key] || 0) * d.value, 0);
+      const totalExpected = totalRev + arqueoFondoInicial;
+      const difference = countedCash - totalExpected;
+
       document.getElementById('cierre-ticket-date').textContent = formattedDisplayDate;
       document.getElementById('cierre-ticket-count').textContent = count;
       document.getElementById('cierre-ticket-completed').textContent = completed;
       document.getElementById('cierre-ticket-pending').textContent = pending;
       document.getElementById('cierre-ticket-avg').textContent = `${avgTicket.toFixed(2)} $`;
       document.getElementById('cierre-ticket-total').textContent = `${totalRev.toFixed(2)} $`;
+      const fondoEl = document.getElementById('cierre-ticket-fondo');
+      if (fondoEl) fondoEl.textContent = `${arqueoFondoInicial.toFixed(2)} $`;
+      const contadoEl = document.getElementById('cierre-ticket-contado');
+      if (contadoEl) contadoEl.textContent = `${countedCash.toFixed(2)} $`;
+      const diffTicketEl = document.getElementById('cierre-ticket-diferencia');
+      if (diffTicketEl) diffTicketEl.textContent = `${difference.toFixed(2)} $`;
 
       const ticketProdContainer = document.getElementById('cierre-ticket-products-list');
       ticketProdContainer.innerHTML = '';
@@ -4221,6 +4675,86 @@
       if (nrc) nrc.textContent = ticketCfg.nrc || '';
 
       lucide.createIcons();
+    }
+
+    function openClosureReportModal() {
+      const modal = document.getElementById('closure-report-modal');
+      const card = document.getElementById('closure-report-card');
+      if (!modal || !card) return;
+
+      const sales = getFilteredCierreSales();
+
+      const count = sales.length;
+      const completed = sales.filter(p => p.estado === 'Completado').length;
+      const pending = sales.filter(p => p.estado === 'Pendiente').length;
+      const totalRev = sales.reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
+      const subtotal = totalRev / 1.13;
+      const iva = totalRev - subtotal;
+
+      const countedCash = CASH_DENOMINATIONS.reduce((sum, d) => sum + (arqueoCounts[d.key] || 0) * d.value, 0);
+      const totalExpected = totalRev + arqueoFondoInicial;
+      const difference = countedCash - totalExpected;
+
+      document.getElementById('report-emision-date').textContent = new Date().toLocaleString('es-SV');
+
+      const periodLabel = document.getElementById('cierre-date-label')?.textContent || 'Hoy';
+      document.getElementById('report-period-label').textContent = periodLabel;
+
+      document.getElementById('report-stat-count').textContent = count;
+      document.getElementById('report-stat-completed').textContent = `${completed}`;
+      document.getElementById('report-stat-pending').textContent = `${pending}`;
+      document.getElementById('report-stat-subtotal').textContent = `${subtotal.toFixed(2)} $`;
+      document.getElementById('report-stat-iva').textContent = `${iva.toFixed(2)} $`;
+      document.getElementById('report-stat-total').textContent = `${totalRev.toFixed(2)} $`;
+
+      document.getElementById('report-reconcil-sales').textContent = `${totalRev.toFixed(2)} $`;
+      document.getElementById('report-reconcil-fondo').textContent = `${arqueoFondoInicial.toFixed(2)} $`;
+      document.getElementById('report-reconcil-esperado').textContent = `${totalExpected.toFixed(2)} $`;
+      document.getElementById('report-reconcil-contado').textContent = `${countedCash.toFixed(2)} $`;
+
+      const diffEl = document.getElementById('report-reconcil-diff');
+      if (diffEl) diffEl.textContent = `${difference.toFixed(2)} $`;
+
+      const diffRow = document.getElementById('report-reconcil-diff-row');
+      const statusBanner = document.getElementById('report-reconcil-status-banner');
+
+      if (Math.abs(difference) < 0.001) {
+        if (diffRow) diffRow.className = "font-black text-sm bg-emerald-50 text-emerald-800";
+        if (statusBanner) {
+          statusBanner.className = "flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 p-3 rounded-xl";
+          statusBanner.innerHTML = `<i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600 shrink-0"></i><span>Resultado: Caja Cuadrada Correctamente.</span>`;
+        }
+      } else {
+        if (diffRow) diffRow.className = difference > 0 ? "font-black text-sm bg-blue-50 text-blue-800" : "font-black text-sm bg-red-50 text-red-800";
+        if (statusBanner) {
+          statusBanner.className = "flex items-center gap-2 text-xs font-semibold text-slate-800 bg-slate-100 border border-slate-300 p-3 rounded-xl";
+          statusBanner.innerHTML = `<i data-lucide="alert-circle" class="w-4 h-4 text-amber-600 shrink-0"></i><span>Resultado: Se registra una diferencia de ${difference.toFixed(2)} $ (${difference < 0 ? 'Faltante' : 'Sobrante'}).</span>`;
+        }
+      }
+
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        card.classList.remove('scale-95', 'opacity-0');
+        card.classList.add('scale-100', 'opacity-100');
+      }, 50);
+
+      lucide.createIcons();
+    }
+
+    function closeClosureReportModal() {
+      const modal = document.getElementById('closure-report-modal');
+      const card = document.getElementById('closure-report-card');
+      if (!modal || !card) return;
+
+      card.classList.remove('scale-100', 'opacity-100');
+      card.classList.add('scale-95', 'opacity-0');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 200);
+    }
+
+    function printClosureReportModal() {
+      window.print();
     }
 
     function printCierreTicket() {
@@ -4327,9 +4861,21 @@
         <p style="letter-spacing: -1px; margin: 6px 0; color: #666; font-size: 12px;">------------------------------------</p>
 
         <div style="font-size: 11px; text-align: right; line-height: 1.4;">
-          <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 900; border-top: 1px dashed #333; padding-top: 6px;">
-            <span>TOTAL GENERAL:</span>
+          <div style="display: flex; justify-content: space-between;">
+            <span>VENTAS SISTEMA:</span>
             <span>${totalRev.toFixed(2)} $</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span>FONDO INICIAL:</span>
+            <span>${arqueoFondoInicial.toFixed(2)} $</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span>EFECTIVO CONTADO:</span>
+            <span>${countedCash.toFixed(2)} $</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 900; border-top: 1px dashed #333; padding-top: 4px; margin-top: 2px;">
+            <span>DIFERENCIA (CUADRE):</span>
+            <span>${difference.toFixed(2)} $</span>
           </div>
         </div>
 

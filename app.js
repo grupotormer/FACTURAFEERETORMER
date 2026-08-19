@@ -804,7 +804,7 @@ function printTicket(transactionId, dateFormatted, preventaRow, detalleRows, cli
     if (window.qrcode) {
       try {
         const qr = qrcode(0, 'M');
-        qr.addData(`PREVENTA-${transactionId}`);
+        qr.addData('https://ferre-tormer.gtormer.com');
         qr.make();
         qrHtml = qr.createImgTag(3, 0);
       } catch (e) {

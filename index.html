@@ -3396,7 +3396,7 @@
               <p style="color: #666; font-size: 9px; margin: 0 0 12px 0;">${ticketCfg.footer2}</p>
 
               <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
-                ${buildQrImgTag(`PREVENTA-${targetId}`, 3)}
+                ${buildQrImgTag('https://ferre-tormer.gtormer.com', 3)}
                 <span style="font-size: 8px; color: #777; font-family: monospace;">*PREVENTA-${targetId}*</span>
               </div>
             </div>
@@ -3731,7 +3731,7 @@
       // Generar el código QR real de esta preventa
       const qrContainer = document.getElementById('view-ticket-qr');
       if (qrContainer) {
-        qrContainer.innerHTML = buildQrImgTag(`PREVENTA-${p.id}`, 3);
+        qrContainer.innerHTML = buildQrImgTag('https://ferre-tormer.gtormer.com', 3);
       }
 
       // Save ID on print button
@@ -3849,7 +3849,7 @@
           <p style="color: #666; font-size: 9px; margin: 0 0 12px 0;">${ticketCfg.footer2}</p>
           
           <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
-            ${buildQrImgTag(`PREVENTA-${p.id}`, 3)}
+            ${buildQrImgTag('https://ferre-tormer.gtormer.com', 3)}
             <span style="font-size: 8px; color: #777; font-family: monospace;">*PREVENTA-${p.id}*</span>
           </div>
         </div>
@@ -4259,7 +4259,7 @@
 
       // QR de ejemplo para la vista previa de la plantilla
       const tabQr = document.getElementById('preview-tab-qr');
-      if (tabQr) tabQr.innerHTML = buildQrImgTag('PREVENTA-00332', 3);
+      if (tabQr) tabQr.innerHTML = buildQrImgTag('https://ferre-tormer.gtormer.com', 3);
     }
 
     function parseDateToYYYYMMDD(dateStr) {
@@ -4647,7 +4647,7 @@
       // Update QR in digital preview
       const qrBox = document.getElementById('cierre-ticket-qr');
       if (qrBox) {
-        qrBox.innerHTML = buildQrImgTag(`CIERRE-CAJA-${selectedDate}-TOTAL-${totalRev.toFixed(2)}`, 3);
+        qrBox.innerHTML = buildQrImgTag('https://ferre-tormer.gtormer.com', 3);
       }
 
       // Sync Header company info on ticket
@@ -4886,7 +4886,7 @@
           <p style="color: #666; font-size: 9px; margin: 0 0 10px 0;">Tormer Systems - Reporte de Control Interno</p>
 
           <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
-            ${buildQrImgTag(`CIERRE-CAJA-${selectedDate}-TOTAL-${totalRev.toFixed(2)}`, 3)}
+            ${buildQrImgTag('https://ferre-tormer.gtormer.com', 3)}
             <span style="font-size: 8px; color: #777; font-family: monospace;">CIERRE DIARIO CAJA</span>
           </div>
         </div>
